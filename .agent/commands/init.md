@@ -81,8 +81,8 @@ Claude Code と Codex CLI の両方で利用可能です。
 
 ## ドキュメント参照
 
-- 設計決定・アーキテクチャ: `.agent/docs/DESIGN.md`
-- ライブラリ文書: `.agent/docs/libraries/`
+- 設計決定・アーキテクチャ: `.claude/docs/DESIGN.md`
+- ライブラリ文書: `.claude/docs/libraries/`
 
 ---
 

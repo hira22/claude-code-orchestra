@@ -44,20 +44,23 @@ cp -P .claude-starter/CLAUDE.md . && rm -rf .claude-starter
 ### ディレクトリ構成
 
 ```
-.agent/                    # 共通設定
-├── commands/              # Claude Code 用コマンド
-├── docs/
-│   ├── DESIGN.md          # 設計ドキュメント（自動更新）
-│   └── libraries/         # ライブラリ文書
-└── skills/                # 自動発動スキル
-
-.claude/                   # Claude Code 固有設定
+.claude/                   # Claude Code（System 1）の設定・知識ベース
 ├── settings.json          # 権限設定
-└── agents/                # サブエージェント
+├── agents/                # サブエージェント
+├── docs/                  # 知識ベース（実体）
+│   ├── DESIGN.md          # 設計ドキュメント
+│   └── libraries/         # ライブラリ文書
+├── skills -> ../.agent/skills
+└── commands -> ../.agent/commands
 
-.codex/                    # Codex CLI 固有設定
+.agent/                    # 共通ツール
+├── commands/              # Claude Code 用コマンド
+├── skills/                # 自動発動スキル
+└── docs -> ../.claude/docs   # 知識ベースへのリンク
+
+.codex/                    # Codex CLI（System 2）の設定
 ├── config.toml            # Codex 設定
-└── commands/              # Codex 用コマンド（分析・判断系）
+└── commands/              # 分析・判断系コマンド
 
 AGENTS.md                  # プロジェクトメモリ（実体）
 CLAUDE.md -> AGENTS.md     # シンボリックリンク
@@ -130,11 +133,11 @@ CLAUDE.md -> AGENTS.md     # シンボリックリンク
 - よく使うコマンド
 - 注意事項
 
-### .agent/docs/DESIGN.md
+### .claude/docs/DESIGN.md
 
-設計決定が自動的に記録されます。手動で編集も可能です。
+設計決定が自動的に記録されます。Codex の分析結果もここに蓄積されます。
 
-### .agent/docs/libraries/
+### .claude/docs/libraries/
 
 `/research-lib` コマンドでライブラリの制約・使用パターンが文書化されます。
 

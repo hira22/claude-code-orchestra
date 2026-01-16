@@ -65,10 +65,10 @@ Claude Code と Codex CLI の両方で利用可能です。
 ## ドキュメント参照
 
 設計決定・アーキテクチャ・実装方針:
-- `.agent/docs/DESIGN.md`
+- `.claude/docs/DESIGN.md`
 
 各ライブラリの機能・制約・使用パターン:
-- `.agent/docs/libraries/`
+- `.claude/docs/libraries/`
 
 ## 記憶の整理（自動）
 
@@ -78,8 +78,8 @@ Claude Code と Codex CLI の両方で利用可能です。
 
 | 検出したら | 記録先 | 例 |
 |-----------|--------|-----|
-| 設計決定・方針決定 | `.agent/docs/DESIGN.md` | 「ReActパターンでいこう」 |
-| ライブラリの制約発見 | `.agent/docs/libraries/{name}.md` | 「このAPIは非同期のみ」 |
+| 設計決定・方針決定 | `.claude/docs/DESIGN.md` | 「ReActパターンでいこう」 |
+| ライブラリの制約発見 | `.claude/docs/libraries/{name}.md` | 「このAPIは非同期のみ」 |
 | プロジェクト固有のルール | この `AGENTS.md` に追記 | 「エラーは日本語で出力」 |
 
 記録後は「DESIGN.mdに記録しました」のように簡潔に報告する。
@@ -98,7 +98,7 @@ Claude Code と Codex CLI の両方で利用可能です。
 ### ライブラリ管理
 - **uvを使用**（pip直接使用は禁止）
 - 依存関係は `pyproject.toml` で管理
-- 各ライブラリの機能・制約を `.agent/docs/libraries/` に文書化
+- 各ライブラリの機能・制約を `.claude/docs/libraries/` に文書化
 - ライブラリ間の依存関係・競合に注意
 
 ### 情報収集
@@ -111,32 +111,25 @@ Claude Code と Codex CLI の両方で利用可能です。
 ## ディレクトリ構造
 
 ```
-.agent/                    # 共通設定（Claude Code / Codex CLI 共有）
-├── docs/
+.claude/                   # Claude Code（System 1）の設定・知識ベース
+├── settings.json          # 権限設定
+├── agents/                # サブエージェント
+├── docs/                  # 知識ベース（実体）
 │   ├── DESIGN.md          # 設計ドキュメント
 │   └── libraries/         # ライブラリドキュメント
-├── skills/                # 共通スキル
-└── commands/              # 共通コマンド
-
-.claude/                   # Claude Code 固有設定
-├── settings.json          # 権限設定
-├── agents/                # Claude Code エージェント
-├── skills -> ../.agent/skills    # シンボリックリンク
-├── commands -> ../.agent/commands
-└── docs -> ../.agent/docs
-
-.codex/                    # Codex CLI 固有設定
-├── config.toml            # 設定ファイル
-├── skills -> ../.agent/skills    # シンボリックリンク
+├── skills -> ../.agent/skills
 └── commands -> ../.agent/commands
 
-src/                       # ソースコード
-├── agents/                # エージェント実装
-├── llm/                   # LLMラッパー・クライアント
-├── tools/                 # ツール定義
-├── prompts/               # プロンプトテンプレート
-└── utils/                 # ユーティリティ
+.agent/                    # 共通ツール
+├── commands/              # Claude Code 用コマンド
+├── skills/                # 自動発動スキル
+└── docs -> ../.claude/docs   # 知識ベースへのリンク
 
+.codex/                    # Codex CLI（System 2）の設定
+├── config.toml            # 設定ファイル
+└── commands/              # 分析・判断系コマンド
+
+src/                       # ソースコード
 tests/                     # テスト
 ```
 

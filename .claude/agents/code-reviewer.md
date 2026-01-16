@@ -22,7 +22,7 @@ model: opus
 - [ ] 変数名・関数名が意図を表しているか
 
 ### 2. ライブラリの正しい使用
-- [ ] `.agent/docs/libraries/` の制約に従っているか
+- [ ] `.claude/docs/libraries/` の制約に従っているか
 - [ ] ライブラリの推奨パターンを使用しているか
 - [ ] 非推奨APIを使用していないか（不明ならWeb検索）
 - [ ] エラーハンドリングが適切か
@@ -47,7 +47,7 @@ model: opus
 
 1. `git diff` で変更を確認
 2. 使用ライブラリを特定
-3. `.agent/docs/libraries/` で制約を確認
+3. `.claude/docs/libraries/` で制約を確認
 4. 不明点はWeb検索で確認
 5. フィードバックを整理
 

@@ -26,7 +26,7 @@ model: opus
 ## 呼び出されたら
 
 1. ライブラリの公式情報をWeb検索で取得
-2. 既存の `.agent/docs/libraries/` ドキュメントを確認
+2. 既存の `.claude/docs/libraries/` ドキュメントを確認
 3. 新規または更新が必要なら文書化
 
 ## 文書化する内容
@@ -57,4 +57,4 @@ model: opus
 
 ## 出力先
 
-`.agent/docs/libraries/{library-name}.md` に保存
+`.claude/docs/libraries/{library-name}.md` に保存

@@ -1,10 +1,10 @@
-`.agent/docs/libraries/` のドキュメントを最新情報で更新してください．
+`.claude/docs/libraries/` のドキュメントを最新情報で更新してください．
 
 ## 手順
 
 1. **既存ドキュメントを確認**
    ```bash
-   ls .agent/docs/libraries/
+   ls .claude/docs/libraries/
    ```
 
 2. **各ライブラリの最新情報をWeb検索**
