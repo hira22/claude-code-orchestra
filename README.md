@@ -17,7 +17,7 @@ rm -rf .starter
 
 # 4. プロジェクトを初期化
 claude  # Claude Code を起動
-/init   # AGENTS.md を自動生成
+/init   # AGENTS.md をプロジェクトに合わせて更新
 ```
 
 **ワンライナー:**
