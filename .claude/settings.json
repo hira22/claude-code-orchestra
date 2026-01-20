@@ -3,7 +3,7 @@
   "hooks": {
     "PreToolCall": [
       {
-        "matcher": "Write",
+        "matcher": "Edit|Write",
         "command": "echo '[Codex Check] Is this a design decision or complex implementation? If yes, did you consult Codex first?'"
       }
     ]
