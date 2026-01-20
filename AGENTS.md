@@ -48,7 +48,7 @@ Skills that activate automatically based on conversation:
 | **design-tracker** | Record design decisions | "record this", "architecture" |
 | **mcp-builder** | MCP server development guide | "MCP server", "FastMCP" |
 | **skill-creator** | Create new skills | "create a skill" |
-| **codex-system** | Delegate complex tasks to Codex CLI (System 2) | "think deeper", "second opinion" |
+| **codex-system** | **PROACTIVELY** delegate to Codex CLI (System 2) for design, debugging, planning | design decisions, debugging, "think deeper" |
 
 ### Commands (Explicit Invocation)
 
@@ -84,6 +84,7 @@ Rules to always follow (`.claude/rules/`):
 | Rule | Content |
 |------|---------|
 | **language** | Think in English, respond in Japanese |
+| **system2-delegation** | **ALWAYS consult Codex before design/debug/planning decisions** |
 | **coding-principles** | Simplicity, single responsibility, early return, type hints |
 | **dev-environment** | uv, ruff, ty, marimo usage |
 | **security** | Secrets management, input validation, SQLi/XSS prevention |
@@ -148,6 +149,7 @@ After recording, report briefly like "Recorded in DESIGN.md".
 ├── agents/                # Sub-agents
 ├── rules/                 # Always-applied rules
 │   ├── language.md
+│   ├── system2-delegation.md
 │   ├── coding-principles.md
 │   ├── dev-environment.md
 │   ├── security.md

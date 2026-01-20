@@ -1,42 +1,72 @@
 ---
 name: codex-system
 description: |
-  Delegate tasks to Codex CLI (System 2) for deep analysis, complex reasoning,
-  or second opinions. Triggers on: architecture decisions, algorithm optimization,
-  persistent bugs (2+ failed attempts), security review, performance analysis,
-  multi-file refactoring, or explicit requests like "think deeper", "analyze this",
-  "second opinion", "consult codex".
+  PROACTIVELY delegate to Codex CLI (System 2) for analysis and reasoning.
+  You are System 1 (fast executor) - Codex is System 2 (deep thinker).
+  ALWAYS consult Codex BEFORE making decisions on: design choices, implementation
+  approaches, debugging strategies, refactoring plans, or any non-trivial problem.
+  When uncertain, delegate. Err on the side of consulting Codex.
+  Explicit triggers: "think deeper", "analyze", "second opinion", "consult codex".
 metadata:
   short-description: Claude Code ↔ Codex CLI System 2 collaboration
 ---
 
 # Codex System — System 2 for Claude Code
 
-Coordination system between Claude Code (System 1: Quick Response & Execution) and Codex CLI (System 2: Deep Thinking & Analysis).
+**CRITICAL: You (Claude Code) are System 1. Codex CLI is System 2.**
 
-## Delegation Conditions (Auto-Trigger)
+- **System 1 (You)**: Fast response, execution, simple tasks
+- **System 2 (Codex)**: Deep thinking, analysis, complex reasoning
 
-Delegate to Codex when any of these conditions are met:
+**Default behavior: When in doubt, consult Codex FIRST.**
 
-### 1. Explicit Request
-- Keywords like `think deeper`, `analyze this`, `second opinion`
-- Direct instructions like `consult codex`, `ask codex`
+## MUST Delegate (Required)
 
-### 2. Complexity-Based
-- Architecture decision required (new component design, dependency changes)
-- Changes affecting 10+ files
-- Complex algorithm design/optimization (O(n²) or higher)
-- Deeply nested conditionals (3+ levels)
+Always delegate to Codex in these situations:
 
-### 3. Failure-Based
-- Same problem attempted 2+ times without resolution
-- Tests failing repeatedly
-- Root cause of error is unclear
+### 1. Before Any Design Decision
+- "How should I structure this?"
+- "Which approach is better?"
+- "What's the best way to implement X?"
+- Any architectural choice → **ASK CODEX FIRST**
 
-### 4. Quality/Security
-- Security-related changes (authentication, authorization, encryption)
-- Performance-critical processing
-- Production-impacting refactoring
+### 2. Before Complex Implementation
+- New feature design
+- Multi-file changes (3+ files)
+- Algorithm design
+- API design
+- Database schema changes
+
+### 3. When Debugging
+- Error cause is not immediately obvious
+- First fix attempt didn't work → **STOP and consult Codex**
+- Unexpected behavior
+
+### 4. When Planning
+- Task requires multiple steps
+- Multiple approaches are possible
+- Trade-offs need to be evaluated
+
+### 5. Explicit Triggers
+- User says: "think deeper", "analyze", "second opinion", "consult codex"
+- User says: "考えて", "分析して", "深く考えて", "codexに聞いて"
+
+## SHOULD Delegate (Recommended)
+
+Strongly consider delegating for:
+
+- Security-related code
+- Performance optimization
+- Refactoring existing code
+- Code review / quality check
+- Library selection
+- Error handling strategy
+
+## Quick Delegation Rule
+
+**If you pause to think "hmm, how should I do this?" → DELEGATE TO CODEX**
+
+Don't spend time analyzing yourself. Let Codex do the deep thinking.
 
 ## Execution Method
 
