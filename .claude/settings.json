@@ -1,5 +1,13 @@
 {
   "$schema": "https://code.claude.com/schemas/settings.json",
+  "hooks": {
+    "PreToolCall": [
+      {
+        "matcher": "Task|Edit|Write",
+        "command": "echo '[Reminder] Before design decisions, debugging, or planning: consult Codex CLI first. Run: codex exec --model gpt-5-codex --sandbox read-only --full-auto \"your question\"'"
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "Read(*)",
