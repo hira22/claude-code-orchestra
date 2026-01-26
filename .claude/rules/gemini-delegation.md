@@ -4,16 +4,20 @@
 
 ## Context Management (CRITICAL)
 
-**Always delegate Gemini work to subagents** to preserve main orchestrator context.
+**コンテキスト消費を意識してGeminiを使う。** Gemini出力は大きくなりがちなので、サブエージェント経由を推奨。
 
-Gemini outputs can be very large (codebase analysis, research reports). Running through subagent ensures main context stays clean.
+| 状況 | 推奨方法 |
+|------|----------|
+| 短い質問・短い回答 | 直接呼び出しOK |
+| コードベース分析 | サブエージェント経由（出力大） |
+| ライブラリ調査 | サブエージェント経由（出力大） |
+| マルチモーダル処理 | サブエージェント経由 |
 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  Main Claude Code                                        │
-│  → Does NOT call Gemini directly                         │
-│  → Spawns subagent for Gemini research                   │
-│  → Receives concise summary back                         │
+│  → 短い質問なら直接呼び出しOK                             │
+│  → 大きな出力が予想されるならサブエージェント経由          │
 │                                                          │
 │  ┌────────────────────────────────────────────────────┐ │
 │  │  Subagent (general-purpose)                         │ │

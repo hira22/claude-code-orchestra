@@ -4,14 +4,20 @@
 
 ## Context Management (CRITICAL)
 
-**Always delegate Codex work to subagents** to preserve main orchestrator context.
+**コンテキスト消費を意識してCodexを使う。** 大きな出力が予想される場合はサブエージェント経由を推奨。
+
+| 状況 | 推奨方法 |
+|------|----------|
+| 短い質問・短い回答 | 直接呼び出しOK |
+| 詳細な設計相談 | サブエージェント経由 |
+| デバッグ分析 | サブエージェント経由 |
+| 複数の質問がある | サブエージェント経由 |
 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  Main Claude Code                                        │
-│  → Does NOT call Codex directly                          │
-│  → Spawns subagent for Codex consultation                │
-│  → Receives concise summary back                         │
+│  → 短い質問なら直接呼び出しOK                             │
+│  → 大きな出力が予想されるならサブエージェント経由          │
 │                                                          │
 │  ┌────────────────────────────────────────────────────┐ │
 │  │  Subagent (general-purpose)                         │ │
