@@ -135,6 +135,24 @@ Task(subagent_type="general-purpose", prompt="Geminiで{question}を調査して
 | `.claude/docs/research/` | Gemini調査結果 |
 | `.claude/docs/libraries/` | ライブラリ制約 |
 | `.claude/rules/` | コーディングルール |
+| `.claude/logs/cli-tools.jsonl` | **Codex/Gemini入出力ログ** |
+
+### CLI Logs (Codex/Gemini)
+
+Codex/Gemini への入出力は自動的に `.claude/logs/cli-tools.jsonl` に記録されます。
+
+```bash
+# 最近のログを確認
+tail -10 .claude/logs/cli-tools.jsonl | jq '.'
+
+# Codexのみ
+jq 'select(.tool == "codex")' .claude/logs/cli-tools.jsonl
+
+# 特定のプロンプトを検索
+jq 'select(.prompt | contains("設計"))' .claude/logs/cli-tools.jsonl
+```
+
+**全エージェント（Claude, Subagent, Codex, Gemini）がこのログを参照できます。**
 
 ---
 
