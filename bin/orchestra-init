@@ -1,0 +1,118 @@
+#!/bin/bash
+# Claude Code Orchestra 初期化スクリプト
+# 現在のプロジェクトにorchestra環境を適用します
+
+set -e
+
+TEMPLATE_DIR="$HOME/.claude-orchestra-template"
+
+# テンプレートの存在確認
+if [ ! -d "$TEMPLATE_DIR" ]; then
+    echo "エラー: テンプレートディレクトリが見つかりません: $TEMPLATE_DIR"
+    exit 1
+fi
+
+echo "🎼 Claude Code Orchestra 環境を適用します..."
+
+# settings.jsonマージ関数
+merge_settings_json() {
+    local existing="$1"
+    local template="$2"
+    local output="$3"
+
+    # jqで既存設定を保持しつつorchestraの設定を追加
+    # hooksは配列を結合して重複排除
+    jq -s '
+        .[0] as $existing |
+        .[1] as $template |
+
+        # hooks配列をマージする関数（commandで重複判定）
+        def merge_hooks($a; $b):
+            ($a // []) + ($b // []) | unique_by(.hooks[0].command // .);
+
+        ($existing // {}) + {
+            hooks: {
+                UserPromptSubmit: merge_hooks($existing.hooks.UserPromptSubmit; $template.hooks.UserPromptSubmit),
+                PreToolUse: merge_hooks($existing.hooks.PreToolUse; $template.hooks.PreToolUse),
+                PostToolUse: merge_hooks($existing.hooks.PostToolUse; $template.hooks.PostToolUse)
+            },
+            permissions: {
+                allow: (($existing.permissions.allow // []) + ($template.permissions.allow // [])) | unique,
+                deny: (($existing.permissions.deny // []) + ($template.permissions.deny // [])) | unique,
+                ask: ($existing.permissions.ask // []),
+                defaultMode: ($existing.permissions.defaultMode // "normal")
+            },
+            env: (($existing.env // {}) + ($template.env // {}))
+        }
+    ' "$existing" "$template" > "$output"
+}
+
+# .claudeディレクトリのコピー
+if [ -d ".claude" ]; then
+    echo "⚠️  .claude/ が既に存在します。マージしますか？ (y/n)"
+    read -r response
+    if [ "$response" = "y" ]; then
+        # settings.json以外を既存保持でコピー
+        find "$TEMPLATE_DIR/.claude" -mindepth 1 -maxdepth 1 -not -name "settings.json" -exec cp -rn {} .claude/ \; 2>/dev/null || true
+
+        # settings.jsonは別途マージ
+        if [ -f ".claude/settings.json" ]; then
+            echo "  → settings.json をマージ中..."
+            merge_settings_json ".claude/settings.json" "$TEMPLATE_DIR/.claude/settings.json" ".claude/settings.json.tmp"
+            mv ".claude/settings.json.tmp" ".claude/settings.json"
+            echo "  ✓ settings.json をマージしました（hooks追加、permissions統合）"
+        else
+            cp "$TEMPLATE_DIR/.claude/settings.json" .claude/
+            echo "  ✓ settings.json を作成しました"
+        fi
+
+        echo "✓ .claude/ をマージしました"
+    else
+        echo "→ .claude/ をスキップしました"
+    fi
+else
+    cp -r "$TEMPLATE_DIR/.claude" .
+    echo "✓ .claude/ を作成しました"
+fi
+
+# .codexディレクトリのコピー
+if [ -d ".codex" ]; then
+    echo "⚠️  .codex/ が既に存在します。上書きしますか？ (y/n)"
+    read -r response
+    if [ "$response" = "y" ]; then
+        cp -r "$TEMPLATE_DIR/.codex" .
+        echo "✓ .codex/ を上書きしました"
+    else
+        echo "→ .codex/ をスキップしました"
+    fi
+else
+    cp -r "$TEMPLATE_DIR/.codex" .
+    echo "✓ .codex/ を作成しました"
+fi
+
+# .geminiディレクトリのコピー
+if [ -d ".gemini" ]; then
+    echo "⚠️  .gemini/ が既に存在します。上書きしますか？ (y/n)"
+    read -r response
+    if [ "$response" = "y" ]; then
+        cp -r "$TEMPLATE_DIR/.gemini" .
+        echo "✓ .gemini/ を上書きしました"
+    else
+        echo "→ .gemini/ をスキップしました"
+    fi
+else
+    cp -r "$TEMPLATE_DIR/.gemini" .
+    echo "✓ .gemini/ を作成しました"
+fi
+
+echo ""
+echo "🎉 Orchestra環境の適用が完了しました！"
+echo ""
+echo "利用可能なスキル:"
+echo "  /startproject - マルチエージェント協調でプロジェクト開始"
+echo "  /plan         - 実装計画作成"
+echo "  /tdd          - テスト駆動開発"
+echo "  /codex-system - Codex CLI連携"
+echo "  /gemini-system - Gemini CLI連携"
+echo ""
+echo "claudeを起動して開始してください。"

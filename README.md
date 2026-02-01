@@ -12,10 +12,18 @@ Claude Code (Orchestrator) ─┬─ Codex CLI (Deep Reasoning)
 
 ## Quick Start
 
-既存プロジェクトのルートで実行:
+### インストール（初回のみ）
 
 ```bash
-git clone --depth 1 https://github.com/DeL-TaiseiOzaki/claude-code-orchestra.git .starter && cp -r .starter/.claude .starter/.codex .starter/.gemini .starter/CLAUDE.md . && rm -rf .starter && claude
+curl -fsSL https://raw.githubusercontent.com/hira22/claude-code-orchestra/main/install.sh | bash
+```
+
+### プロジェクトへの適用
+
+```bash
+cd /path/to/your/project
+orchestra-init
+claude
 ```
 
 ## Prerequisites
@@ -77,13 +85,10 @@ gemini login
 
 ## Directory Structure
 
+`orchestra-init` 実行後のプロジェクト構造:
+
 ```
 .
-├── CLAUDE.md                    # メインシステムドキュメント
-├── README.md
-├── pyproject.toml               # Python プロジェクト設定
-├── uv.lock                      # 依存関係ロックファイル
-│
 ├── .claude/
 │   ├── agents/
 │   │   └── general-purpose.md   # サブエージェント設定
