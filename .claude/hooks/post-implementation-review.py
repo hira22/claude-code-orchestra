@@ -103,6 +103,12 @@ def main():
 
         # Load and update state
         state = load_state()
+
+        # Once a review has been suggested for this implementation block,
+        # skip further bookkeeping I/O on every subsequent edit.
+        if state.get("review_suggested"):
+            sys.exit(0)
+
         if file_path not in state["files_changed"]:
             state["files_changed"].append(file_path)
         state["total_lines"] += count_lines(content)
