@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Post-tool hook: format + lint + type-check Python files after Edit/Write.
 
-Runs ruff (check --fix then format) and ty in parallel via ThreadPoolExecutor.
-ruff check and ruff format both write to the file, so they must stay
-sequential against each other; ty is read-only and runs in parallel.
+Runs ruff check --fix -> ruff format -> ty check sequentially. The ruff
+sequence mutates the file (auto-fix and format both rewrite it), so ty
+must observe the post-ruff state to avoid reporting stale type errors
+against pre-fix code (e.g. unused-import that ruff just removed).
 """
 
-import concurrent.futures
 import json
 import os
 import subprocess
@@ -92,10 +92,10 @@ def main() -> None:
         else file_path
     )
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        ruff_future = executor.submit(run_ruff_sequence, file_path, project_dir)
-        ty_future = executor.submit(run_ty_check, file_path, project_dir)
-        issues = ruff_future.result() + ty_future.result()
+    # ty must observe the post-ruff state, so the order is strict:
+    # ruff check --fix -> ruff format (both rewrite the file) -> ty check.
+    issues = run_ruff_sequence(file_path, project_dir)
+    issues += run_ty_check(file_path, project_dir)
 
     if issues:
         print(f"[lint-on-save] Issues found in {rel_path}:", file=sys.stderr)

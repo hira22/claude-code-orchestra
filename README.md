@@ -135,8 +135,7 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │   │   ├── simplify/            # Code refactoring
 │   │   ├── codex-system/        # Codex CLI integration
 │   │   ├── gemini-system/       # Gemini CLI integration
-│   │   ├── design-tracker/      # Automatic design decision tracking
-│   │   ├── update-design/       # Explicit design document updates
+│   │   ├── design-tracker/      # Design decision tracking (auto + explicit)
 │   │   ├── research-lib/        # Library research
 │   │   ├── update-lib-docs/     # Library documentation updates
 │   │   ├── checkpointing/       # Session persistence + pattern discovery
@@ -348,11 +347,7 @@ Multimodal file processing (PDF/video/audio/image) powered by Gemini CLI.
 
 #### `/design-tracker` — Design Decision Tracking
 
-Automatically records architecture and implementation decisions. Detects design decisions during conversation and appends them to `.claude/docs/DESIGN.md`.
-
-#### `/update-design` — Update Design Document
-
-Extracts design decisions from conversation content and explicitly updates `.claude/docs/DESIGN.md`.
+Tracks architecture and implementation decisions in `.claude/docs/DESIGN.md`. Activates automatically during design discussions, and also accepts explicit invocation (`/design-tracker [content]`) when you want to force an update — this absorbs the former `/update-design` flow.
 
 #### `/research-lib` — Library Research
 

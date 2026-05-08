@@ -1,6 +1,6 @@
 ---
 name: codex-system
-description: Codex CLI for planning, design, complex code, and debugging analysis.
+description: Codex CLI for plan, design, architecture, analyze, debug, optimize, complex code, and code review.
 metadata:
   short-description: Codex CLI — planning, design, and complex implementation
 ---

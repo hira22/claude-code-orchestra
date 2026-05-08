@@ -1,6 +1,6 @@
 ---
 name: design-tracker
-description: Track and document design decisions. Auto-activates on architecture discussions.
+description: Track design decisions in DESIGN.md. Triggers on architecture talk, "record this", "update design", or explicit /design-tracker.
 ---
 
 # Design Tracker Skill
