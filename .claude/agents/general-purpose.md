@@ -46,10 +46,10 @@ When planning, design decisions, debugging, or complex implementation is needed:
 
 ```bash
 # Analysis (read-only)
-codex exec --model gpt-5.4 --sandbox read-only --full-auto "{question}" 2>/dev/null
+codex exec --sandbox read-only "{question}"
 
 # Implementation work (can write files)
-codex exec --model gpt-5.4 --sandbox workspace-write --full-auto "{task}" 2>/dev/null
+codex exec --sandbox workspace-write "{task}"
 ```
 
 **When to call Codex:**

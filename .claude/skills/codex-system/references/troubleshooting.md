@@ -45,13 +45,16 @@ codex exec --skip-git-repo-check ...
 
 ## Excessive Reasoning Output
 
-```bash
-# Suppress stderr
-codex exec ... 2>/dev/null
+Configure in `~/.codex/config.toml`:
 
-# Or configure in config.toml
+```toml
 hide_agent_reasoning = true
 ```
+
+> **Do NOT redirect stderr to /dev/null** (`2>/dev/null`). It silences all
+> errors including authentication failures, model 404s, and unrecognized
+> flags, making delegation failures invisible. Use `hide_agent_reasoning`
+> to control reasoning output instead.
 
 ## Cannot Continue Session
 

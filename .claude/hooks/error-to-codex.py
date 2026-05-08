@@ -42,6 +42,8 @@ IGNORE_COMMANDS = [
     "which",
     "type",
     "true",
+    "grep",
+    "find",
 ]
 
 # Outputs to ignore (trivial / expected errors)
@@ -104,6 +106,12 @@ def main() -> None:
         tool_response = data.get("tool_response", {})
         command = tool_input.get("command", "")
         tool_output = tool_response.get("stdout", "") or tool_response.get("content", "")
+        exit_code = tool_response.get("exit_code", 0)
+
+        # Genuine errors almost always exit non-zero. Skip exit-0 commands to
+        # avoid false positives like grep matching the literal string "Error".
+        if exit_code == 0:
+            sys.exit(0)
 
         if not command or not tool_output:
             sys.exit(0)

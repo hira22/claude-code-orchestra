@@ -173,14 +173,11 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │       ├── context-loader/      # Context loading skill
 │       └── design-tracker/      # Design tracking skill
 │
-├── .gemini/                     # Gemini CLI configuration
-│   ├── GEMINI.md
-│   ├── settings.json
-│   └── skills/
-│       └── context-loader/      # Context loading skill
-│
-└── scripts/
-    └── update.sh               # Template update script
+└── .gemini/                     # Gemini CLI configuration
+    ├── GEMINI.md
+    ├── settings.json
+    └── skills/
+        └── context-loader/      # Context loading skill
 ```
 
 ### Stabilizing Codex Integration
@@ -394,30 +391,13 @@ Scans the repository (git history, CLAUDE.md/AGENTS.md, project rules, skill cat
 
 ## Development
 
-### Template Update
+### CLAUDE.md Layout
 
-Safely applies template updates to your local project.
+`CLAUDE.md` uses a 2-zone layout separated by two markers:
 
-```bash
-# Update to the latest version
-./scripts/update.sh
-
-# Update to a specific version
-./scripts/update.sh v0.2.0
-
-# Skip confirmation prompt
-./scripts/update.sh --yes
-```
-
-**How it works:**
-- `CLAUDE.md` uses a 3-zone layout separated by two markers:
-  - **Zone A** (above `@orchestra:template-boundary`) — orchestra concept & template base; fully replaced by the update
-  - **Zone B** (between the two markers) — repository identity, managed by `/init`; preserved across updates
-  - **Zone C** (below `@orchestra:repo-boundary`) — working state (features, session notes); preserved across updates
-- Projects still using the legacy `@orchestra:local-boundary` layout are auto-migrated on first run: their content below the legacy marker becomes Zone C, and Zone B is reset to the placeholder so `/init` can repopulate it
-- skills/hooks/rules/agents are fully synced
-- Local data such as `.claude/docs/research/` is preserved
-- `.claude/settings.json` only shows a diff (manual merge required)
+- **Zone A** (above `@orchestra:template-boundary`) — orchestra concept & template base
+- **Zone B** (between `@orchestra:template-boundary` and `@orchestra:repo-boundary`) — repository identity, managed by `/init`
+- **Zone C** (below `@orchestra:repo-boundary`) — working state (features, session notes)
 
 ### Tech Stack
 

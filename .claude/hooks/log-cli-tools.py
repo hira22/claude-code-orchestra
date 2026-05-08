@@ -20,16 +20,18 @@ LOG_FILE = LOG_DIR / "cli-tools.jsonl"
 
 
 def extract_codex_prompt(command: str) -> str | None:
-    """Extract prompt from codex exec command."""
-    # Pattern: codex exec ... "prompt" or codex exec ... 'prompt'
+    """Extract prompt from codex exec command.
+
+    Matches the first quoted string after `codex exec`, regardless of which
+    flags are present. Works with current format (no --full-auto/--model) and
+    legacy format. Multi-line backslash-continued commands are supported.
+    """
     patterns = [
-        r'codex\s+exec\s+.*?--full-auto\s+"([^"]+)"',
-        r"codex\s+exec\s+.*?--full-auto\s+'([^']+)'",
-        r'codex\s+exec\s+.*?"([^"]+)"\s*2>/dev/null',
-        r"codex\s+exec\s+.*?'([^']+)'\s*2>/dev/null",
+        r'codex\s+exec\b[\s\S]*?"([^"]+)"',
+        r"codex\s+exec\b[\s\S]*?'([^']+)'",
     ]
     for pattern in patterns:
-        match = re.search(pattern, command, re.DOTALL)
+        match = re.search(pattern, command)
         if match:
             return match.group(1).strip()
     return None
@@ -99,11 +101,11 @@ def main() -> None:
     if is_codex:
         tool = "codex"
         prompt = extract_codex_prompt(command)
-        model = extract_model(command) or "gpt-5.4"
+        model = extract_model(command) or "default"
     else:
         tool = "gemini"
         prompt = extract_gemini_prompt(command)
-        model = "gemini-3-pro-preview"
+        model = "gemini-3.1-pro-preview"
 
     if not prompt:
         # Could not extract prompt, skip logging

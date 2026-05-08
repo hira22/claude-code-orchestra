@@ -25,11 +25,16 @@ MULTIMODAL_EXTENSIONS = [
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
 ]
 
-# Pattern to detect file paths with multimodal extensions
+# Pattern to detect file paths with multimodal extensions.
+# The trailing lookahead uses an ASCII-only character class because Python's
+# `\w` matches Unicode word characters by default — meaning Japanese letters
+# would (incorrectly) be treated as filename continuations and prevent the
+# match. Limiting to ASCII filename characters lets Japanese, whitespace,
+# quotes, and punctuation all serve as the boundary.
 MULTIMODAL_PATTERN = re.compile(
     r'[\w./\\~-]+\.(?:' +
     '|'.join(ext.lstrip('.') for ext in MULTIMODAL_EXTENSIONS) +
-    r')(?:\s|$|["\']|,)',
+    r')(?![a-zA-Z0-9_.-])',
     re.IGNORECASE,
 )
 
@@ -114,17 +119,19 @@ def detect_agent(prompt: str) -> tuple[str | None, str, bool]:
     if multimodal_file:
         return "gemini-multimodal", multimodal_file, True
 
+    # Codex Plugin triggers checked first because they are more specific
+    # phrases (e.g. "レビューして") that would otherwise be shadowed by
+    # shorter CODEX_TRIGGERS entries (e.g. "レビュー").
+    for triggers in CODEX_PLUGIN_TRIGGERS.values():
+        for trigger in triggers:
+            if trigger in prompt_lower:
+                return "codex-plugin", trigger, False
+
     # Codex triggers (planning, design, debug, complex code)
     for triggers in CODEX_TRIGGERS.values():
         for trigger in triggers:
             if trigger in prompt_lower:
                 return "codex", trigger, False
-
-    # Codex Plugin triggers (review, rescue, delegation)
-    for triggers in CODEX_PLUGIN_TRIGGERS.values():
-        for trigger in triggers:
-            if trigger in prompt_lower:
-                return "codex-plugin", trigger, False
 
     # Opus research triggers (codebase analysis + external research)
     for triggers in OPUS_RESEARCH_TRIGGERS.values():
@@ -154,7 +161,7 @@ def main():
                         f"[Multimodal File Detected] Found '{trigger}' in prompt. "
                         "**MUST** use Gemini CLI to process this file. "
                         "Pass the file to Gemini with specific extraction instructions: "
-                        f'`gemini -p "Extract: {{what to extract}} @{trigger}" 2>/dev/null` '
+                        f'`gemini -p "Extract: {{what to extract}} @{trigger}"` '
                         "Do NOT attempt to read this file directly — use Gemini for content extraction."
                     )
                 }
@@ -168,7 +175,7 @@ def main():
                     "additionalContext": (
                         f"[Agent Routing] Detected '{trigger}' — this task may benefit from "
                         "Codex CLI for planning, design, or complex implementation. Consider: "
-                        "`codex exec --model gpt-5.4 --sandbox read-only --full-auto "
+                        "`codex exec --sandbox read-only "
                         '"{task description}"` for design decisions, planning, debugging, '
                         "or complex analysis."
                     )

@@ -109,7 +109,7 @@ Task tool:
 Consult Codex for scope analysis and impact assessment:
 
 ```bash
-codex exec --model gpt-5.4 --sandbox read-only --full-auto "
+codex exec --sandbox read-only "
 Objective: Analyze the scope and impact of adding this feature to the existing codebase.
 Context:
 - Feature: {feature description}
@@ -128,7 +128,7 @@ Output format:
 ## Affected Files (with change type: new / modify)
 ## Risks and Concerns
 ## Recommended Approach
-" 2>/dev/null
+"
 ```
 
 Use Codex's complexity classification to determine the implementation route in Phase 3.
@@ -186,7 +186,7 @@ This brief is passed to Phase 2 for design.
 Consult Codex to design how the feature fits into the existing codebase:
 
 ```bash
-codex exec --model gpt-5.4 --sandbox read-only --full-auto "
+codex exec --sandbox read-only "
 Objective: Design the architecture for adding this feature to the existing codebase.
 Context:
 - Feature Brief: {feature brief from Phase 1}
@@ -204,7 +204,7 @@ Output format:
 ## Data Flow
 ## Error Handling Strategy
 ## Test Strategy
-" 2>/dev/null
+"
 ```
 
 ### Step 2: Codex Implementation Plan (MANDATORY)
@@ -212,7 +212,7 @@ Output format:
 Consult Codex to create a step-by-step implementation plan:
 
 ```bash
-codex exec --model gpt-5.4 --sandbox read-only --full-auto "
+codex exec --sandbox read-only "
 Objective: Create a step-by-step implementation plan for this feature.
 Context:
 - Feature Brief: {feature brief from Phase 1}
@@ -229,7 +229,7 @@ Output format:
 ## Test Plan (per step: what to test)
 ## Dependencies Between Steps
 ## Estimated Effort per Step
-" 2>/dev/null
+"
 ```
 
 ### Step 3: Codex Validation (MANDATORY)
@@ -237,7 +237,7 @@ Output format:
 Consult Codex to validate the plan for completeness and correctness:
 
 ```bash
-codex exec --model gpt-5.4 --sandbox read-only --full-auto "
+codex exec --sandbox read-only "
 Objective: Validate this implementation plan for completeness, correctness, and risk.
 Context:
 - Feature Brief: {feature brief}
@@ -258,7 +258,7 @@ Output format:
 ## Integration Risks
 ## Additional Test Cases Recommended
 ## Revised Steps (if NEEDS_REVISION)
-" 2>/dev/null
+"
 ```
 
 If Codex returns NEEDS_REVISION, update the plan and re-validate before proceeding.
@@ -335,7 +335,7 @@ Shall we proceed with this plan?
 For simple features, Codex implements directly:
 
 ```bash
-codex exec --model gpt-5.4 --sandbox workspace-write --full-auto "
+codex exec --sandbox workspace-write "
 Objective: Implement this feature following the approved plan.
 Context:
 - Feature Brief: {feature brief}
@@ -358,7 +358,7 @@ Output format:
 ## Tests Written
 ## Validation Results
 ## Remaining Risks
-" 2>/dev/null
+"
 ```
 
 After Codex implementation, verify:

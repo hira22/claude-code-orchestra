@@ -65,9 +65,9 @@ Task tool parameters:
 - prompt: |
     Consult Codex about: {topic}
 
-    codex exec --model gpt-5.4 --sandbox read-only --full-auto "
+    codex exec --sandbox read-only "
     {question for Codex}
-    " 2>/dev/null
+    "
 
     Return CONCISE summary (key recommendation + rationale).
 ```
@@ -75,17 +75,17 @@ Task tool parameters:
 ### Direct Call (responses up to ~50 lines)
 
 ```bash
-codex exec --model gpt-5.4 --sandbox read-only --full-auto "Brief question" 2>/dev/null
+codex exec --sandbox read-only "Brief question"
 ```
 
 ### Having Codex Implement Code
 
 ```bash
-codex exec --model gpt-5.4 --sandbox workspace-write --full-auto "
+codex exec --sandbox workspace-write "
 Implement: {task description}
 Requirements: {requirements}
 Files: {file paths}
-" 2>/dev/null
+"
 ```
 
 ### Sandbox Modes
@@ -100,7 +100,7 @@ Files: {file paths}
 ### Implementation Planning
 
 ```bash
-codex exec --model gpt-5.4 --sandbox read-only --full-auto "
+codex exec --sandbox read-only "
 Create an implementation plan for: {feature}
 
 Context: {relevant architecture/code}
@@ -110,13 +110,13 @@ Provide:
 2. Files to create/modify
 3. Key design decisions
 4. Risks and mitigations
-" 2>/dev/null
+"
 ```
 
 ### Design Review
 
 ```bash
-codex exec --model gpt-5.4 --sandbox read-only --full-auto "
+codex exec --sandbox read-only "
 Review this design approach for: {feature}
 
 Context: {relevant code or architecture}
@@ -126,13 +126,13 @@ Evaluate:
 2. Alternative approaches?
 3. Potential issues?
 4. Recommendations?
-" 2>/dev/null
+"
 ```
 
 ### Debug Analysis
 
 ```bash
-codex exec --model gpt-5.4 --sandbox read-only --full-auto "
+codex exec --sandbox read-only "
 Debug this issue:
 
 Error: {error message}
@@ -140,7 +140,7 @@ Code: {relevant code}
 Context: {what was happening}
 
 Analyze root cause and suggest fixes.
-" 2>/dev/null
+"
 ```
 
 ## Language Protocol
@@ -176,7 +176,7 @@ When the `openai/codex-plugin-cc` plugin is installed, these slash commands are 
 /codex:rescue investigate why the tests started failing
 /codex:rescue fix the failing test with the smallest safe patch
 /codex:rescue --resume apply the top fix from the last run
-/codex:rescue --model gpt-5.4-mini --effort medium investigate flaky test
+/codex:rescue --effort medium investigate flaky test
 /codex:rescue --background investigate the regression
 ```
 

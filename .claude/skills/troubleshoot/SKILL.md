@@ -98,7 +98,7 @@ Task tool:
 Consult Codex for initial hypothesis generation before creating the Bug Report:
 
 ```bash
-codex exec --model gpt-5.4 --sandbox read-only --full-auto "
+codex exec --sandbox read-only "
 Objective: Analyze this error and generate initial hypotheses for root cause.
 Context:
 - Error: {error message / stack trace}
@@ -113,7 +113,7 @@ Output format:
 ## Hypotheses (ranked by likelihood)
 ## Investigation Plan (per hypothesis)
 ## Known Similar Patterns
-" 2>/dev/null
+"
 ```
 
 Use Codex's analysis to strengthen the Initial Hypotheses section of the Bug Report.
@@ -202,7 +202,7 @@ Spawn two teammates:
 
    ### 1. Execution Flow Tracing
    For complex control flow, consult Codex:
-   codex exec --model gpt-5.4 --sandbox read-only --full-auto '
+   codex exec --sandbox read-only '
    Objective: Trace the execution flow from {entry point} to {error location}.
    Context:
    - Entry point: {file:function}
@@ -216,11 +216,11 @@ Spawn two teammates:
    ## State Transformations
    ## Assumption Violations
    ## Critical Decision Points
-   ' 2>/dev/null
+   '
 
    ### 2. Hypothesis Evaluation
    For each hypothesis, consult Codex to evaluate evidence:
-   codex exec --model gpt-5.4 --sandbox read-only --full-auto '
+   codex exec --sandbox read-only '
    Objective: Evaluate hypothesis \"{hypothesis}\" against collected evidence.
    Context:
    - Hypothesis: {description}
@@ -234,11 +234,11 @@ Spawn two teammates:
    ## Verdict (CONFIRMED / ELIMINATED / INCONCLUSIVE)
    ## Reasoning
    ## Remaining Unknowns
-   ' 2>/dev/null
+   '
 
    ### 3. Fix Approach Design
    Consult Codex for trade-off analysis of fix alternatives:
-   codex exec --model gpt-5.4 --sandbox read-only --full-auto '
+   codex exec --sandbox read-only '
    Objective: Design and compare fix approaches for root cause: {root cause description}.
    Context:
    - Root cause: {description}
@@ -254,11 +254,11 @@ Spawn two teammates:
    ## Approach B: {name}
    ## Comparison Matrix
    ## Recommendation with Rationale
-   ' 2>/dev/null
+   '
 
    ### 4. Fix Correctness Verification
    Before finalizing, consult Codex to verify the proposed fix:
-   codex exec --model gpt-5.4 --sandbox read-only --full-auto '
+   codex exec --sandbox read-only '
    Objective: Verify that the proposed fix correctly resolves the root cause.
    Context:
    - Root cause: {description}
@@ -273,7 +273,7 @@ Spawn two teammates:
    ## Edge Case Coverage
    ## New Failure Modes (if any)
    ## Confidence Level
-   ' 2>/dev/null
+   '
 
    Save analysis to .claude/docs/research/troubleshoot-{issue}-root-cause.md
 
@@ -348,7 +348,7 @@ Spawn two teammates:
 
    ### Regression Risk Reasoning
    Consult Codex to evaluate what could break if the proposed change is applied:
-   codex exec --model gpt-5.4 --sandbox read-only --full-auto '
+   codex exec --sandbox read-only '
    Objective: Evaluate regression risk if {proposed change} is applied to {file:line}.
    Context:
    - Current behavior: {description}
@@ -364,11 +364,11 @@ Spawn two teammates:
    ## Affected Code Paths
    ## Implicit Contracts at Risk
    ## Recommended Safeguards
-   ' 2>/dev/null
+   '
 
    ### Fix Safety Analysis
    Consult Codex to verify the proposed fix does not introduce new issues:
-   codex exec --model gpt-5.4 --sandbox read-only --full-auto '
+   codex exec --sandbox read-only '
    Objective: Analyze whether the proposed fix introduces new issues or side effects.
    Context:
    - Root cause: {from Root Cause Analyst}
@@ -384,7 +384,7 @@ Spawn two teammates:
    ## New Issues Identified
    ## Side Effects
    ## Mitigation Recommendations
-   ' 2>/dev/null
+   '
 
    Save findings to .claude/docs/research/troubleshoot-{issue}-impact.md
 
@@ -459,7 +459,7 @@ Read outputs from Phase 2:
 Before presenting to the user, validate the fix plan with Codex:
 
 ```bash
-codex exec --model gpt-5.4 --sandbox read-only --full-auto "
+codex exec --sandbox read-only "
 Objective: Validate this fix plan for completeness and correctness.
 Context:
 - Root cause: {from Root Cause Analyst}
@@ -477,7 +477,7 @@ Output format:
 ## Potential New Issues
 ## Additional Test Cases Recommended
 ## Revised Task List (if needed)
-" 2>/dev/null
+"
 ```
 
 If Codex returns NEEDS_REVISION, update the fix plan before presenting to user.
