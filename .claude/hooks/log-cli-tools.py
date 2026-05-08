@@ -20,21 +20,23 @@ LOG_FILE = LOG_DIR / "cli-tools.jsonl"
 
 
 def extract_codex_prompt(command: str) -> str | None:
-    """Extract prompt from codex exec command.
+    """Extract prompt from a `codex exec` command.
 
-    Matches the first quoted string after `codex exec`, regardless of which
-    flags are present. Works with current format (no --full-auto/--model) and
-    legacy format. Multi-line backslash-continued commands are supported.
+    Returns the longest quoted string found after `codex exec`. The prompt is
+    almost always significantly longer than any flag value (e.g. legacy forms
+    such as `--config model_reasoning_effort="high"` precede the real prompt),
+    so picking the longest quoted segment correctly skips quoted flag values
+    while remaining robust to multi-line, backslash-continued commands.
     """
-    patterns = [
-        r'codex\s+exec\b[\s\S]*?"([^"]+)"',
-        r"codex\s+exec\b[\s\S]*?'([^']+)'",
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, command)
-        if match:
-            return match.group(1).strip()
-    return None
+    anchor = re.search(r"codex\s+exec\b", command)
+    if not anchor:
+        return None
+    rest = command[anchor.end():]
+    candidates = re.findall(r'"([^"]+)"', rest)
+    candidates += re.findall(r"'([^']+)'", rest)
+    if not candidates:
+        return None
+    return max(candidates, key=len).strip()
 
 
 def extract_gemini_prompt(command: str) -> str | None:

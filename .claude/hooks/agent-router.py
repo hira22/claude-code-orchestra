@@ -26,13 +26,16 @@ MULTIMODAL_EXTENSIONS = [
 ]
 
 # Pattern to detect file paths with multimodal extensions.
-# The trailing lookahead uses an ASCII-only character class because Python's
-# `\w` matches Unicode word characters by default — meaning Japanese letters
-# would (incorrectly) be treated as filename continuations and prevent the
-# match. Limiting to ASCII filename characters lets Japanese, whitespace,
-# quotes, and punctuation all serve as the boundary.
+# Both the prefix character class and the trailing lookahead are restricted
+# to ASCII so that Japanese (or any non-ASCII text) abutting the path on
+# either side acts as a boundary rather than being captured as part of the
+# filename. Without the ASCII-only prefix, prompts like
+# `このreport.pdfを読んで` would yield the captured path `このreport.pdf`,
+# which then surfaces as `@このreport.pdf` in the routing suggestion even
+# though the actual file is `report.pdf`.
 MULTIMODAL_PATTERN = re.compile(
-    r'[\w./\\~-]+\.(?:' +
+    r'(?<![a-zA-Z0-9_.-])'
+    r'[a-zA-Z0-9_./\\~-]+\.(?:' +
     '|'.join(ext.lstrip('.') for ext in MULTIMODAL_EXTENSIONS) +
     r')(?![a-zA-Z0-9_.-])',
     re.IGNORECASE,
