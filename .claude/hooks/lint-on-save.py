@@ -1,54 +1,49 @@
 #!/usr/bin/env python3
-"""
-Post-tool hook: Run formatter and type checker on Python files after Edit/Write.
+"""Post-tool hook: format + lint + type-check Python files after Edit/Write.
 
-Triggered after Edit or Write tools modify files.
-Runs ruff (format + lint) and ty (type check) on Python files.
+Runs ruff (check --fix then format) and ty in parallel via ThreadPoolExecutor.
+ruff check and ruff format both write to the file, so they must stay
+sequential against each other; ty is read-only and runs in parallel.
 """
 
+import concurrent.futures
 import json
 import os
 import subprocess
 import sys
 
-# Input validation constants
 MAX_PATH_LENGTH = 4096
+SUBPROCESS_TIMEOUT = 15
 
 
 def validate_path(file_path: str) -> bool:
-    """Validate file path for security."""
     if not file_path or len(file_path) > MAX_PATH_LENGTH:
         return False
-    # Check for path traversal
     if ".." in file_path:
         return False
     return True
 
 
 def get_file_path() -> str | None:
-    """Extract file path from hook input via stdin."""
     try:
         data = json.load(sys.stdin)
-        tool_input = data.get("tool_input", {})
-        return tool_input.get("file_path")
+        return data.get("tool_input", {}).get("file_path")
     except (json.JSONDecodeError, Exception):
         return None
 
 
 def is_python_file(path: str) -> bool:
-    """Check if the file is a Python file."""
     return path.endswith(".py")
 
 
-def run_command(cmd: list[str], cwd: str) -> tuple[int, str, str]:
-    """Run a command and return (returncode, stdout, stderr)."""
+def _run(cmd: list[str], cwd: str) -> tuple[int, str, str]:
     try:
         result = subprocess.run(
             cmd,
             cwd=cwd,
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=SUBPROCESS_TIMEOUT,
         )
         return result.returncode, result.stdout, result.stderr
     except subprocess.TimeoutExpired:
@@ -57,66 +52,56 @@ def run_command(cmd: list[str], cwd: str) -> tuple[int, str, str]:
         return 1, "", f"Command not found: {cmd[0]}"
 
 
-def main() -> None:
-    file_path = get_file_path()
-    if not file_path:
-        return
-
-    # Validate input
-    if not validate_path(file_path):
-        return
-
-    if not is_python_file(file_path):
-        return
-
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
-
-    # Determine relative path for display
-    if file_path.startswith(project_dir):
-        rel_path = os.path.relpath(file_path, project_dir)
-    else:
-        rel_path = file_path
-
+def run_ruff_sequence(file_path: str, cwd: str) -> list[str]:
+    """ruff check --fix -> ruff format. Both mutate the file, so sequential."""
     issues: list[str] = []
 
-    # Run ruff format
-    ret, stdout, stderr = run_command(
-        ["uv", "run", "ruff", "format", file_path],
-        cwd=project_dir,
-    )
+    ret, stdout, stderr = _run(["uv", "run", "ruff", "check", "--fix", file_path], cwd)
     if ret != 0:
-        issues.append(f"ruff format failed:\n{stderr or stdout}")
-
-    # Run ruff check with auto-fix
-    ret, stdout, stderr = run_command(
-        ["uv", "run", "ruff", "check", "--fix", file_path],
-        cwd=project_dir,
-    )
-    if ret != 0:
-        # Show remaining issues that couldn't be auto-fixed
         output = stdout or stderr
         if output.strip():
             issues.append(f"ruff check issues:\n{output}")
 
-    # Run ty type check
-    ret, stdout, stderr = run_command(
-        ["uv", "run", "ty", "check", file_path],
-        cwd=project_dir,
-    )
+    ret, stdout, stderr = _run(["uv", "run", "ruff", "format", file_path], cwd)
     if ret != 0:
-        output = stdout or stderr
+        output = stderr or stdout
         if output.strip():
-            issues.append(f"ty check issues:\n{output}")
+            issues.append(f"ruff format failed:\n{output}")
 
-    # Report results
+    return issues
+
+
+def run_ty_check(file_path: str, cwd: str) -> list[str]:
+    """ty is read-only, safe to run in parallel with the ruff sequence."""
+    ret, stdout, stderr = _run(["uv", "run", "ty", "check", file_path], cwd)
+    if ret == 0:
+        return []
+    output = stdout or stderr
+    return [f"ty check issues:\n{output}"] if output.strip() else []
+
+
+def main() -> None:
+    file_path = get_file_path()
+    if not file_path or not validate_path(file_path) or not is_python_file(file_path):
+        return
+
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    rel_path = (
+        os.path.relpath(file_path, project_dir)
+        if file_path.startswith(project_dir)
+        else file_path
+    )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        ruff_future = executor.submit(run_ruff_sequence, file_path, project_dir)
+        ty_future = executor.submit(run_ty_check, file_path, project_dir)
+        issues = ruff_future.result() + ty_future.result()
+
     if issues:
         print(f"[lint-on-save] Issues found in {rel_path}:", file=sys.stderr)
         for issue in issues:
             print(issue, file=sys.stderr)
-        print(
-            "\nPlease review and fix these issues.",
-            file=sys.stderr,
-        )
+        print("\nPlease review and fix these issues.", file=sys.stderr)
     else:
         print(f"[lint-on-save] OK: {rel_path} passed all checks")
 
