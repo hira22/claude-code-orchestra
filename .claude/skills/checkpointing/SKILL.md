@@ -2,7 +2,8 @@
 name: checkpointing
 description: |
   Save full session context: git history, CLI consultations, Agent Teams activity,
-  and discover reusable skill patterns — all in one run. No flags needed.
+  and discover reusable skill patterns — all in one run.
+  Optional `--since YYYY-MM-DD` narrows the scope to recent activity.
   Run at session end, after major milestones, or when you want to capture learnings.
 metadata:
   short-description: Full session checkpoint with skill pattern discovery
@@ -40,11 +41,11 @@ metadata:
 ## Usage
 
 ```bash
-# Everything. No flags needed.
+# Default: capture everything since the last checkpoint
 /checkpointing
 
-# Optional: only look at recent work
-/checkpointing --since "2026-02-08"
+# Optional: limit scope to activity since a specific date
+/checkpointing --since "YYYY-MM-DD"
 ```
 
 ## What Gets Captured

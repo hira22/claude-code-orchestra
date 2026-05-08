@@ -373,13 +373,13 @@ Updates existing documentation in `.claude/docs/libraries/` with the latest info
 Records all session activity (git history, CLI consultations, Agent Teams activity, design decisions) and discovers reusable skill patterns.
 
 ```bash
-/checkpointing                    # Full recording + pattern discovery
-/checkpointing --since "2026-02-08"  # Only since a specific date
+/checkpointing                       # Full recording + pattern discovery
+/checkpointing --since "YYYY-MM-DD"  # Only activity since a specific date
 ```
 
 #### `/init` — Project Initialization
 
-Analyzes the project structure, auto-detects tech stack, commands, and configuration, and updates AGENTS.md.
+Analyzes the project structure, auto-detects tech stack and commands, then populates the **Repository Identity** section of `CLAUDE.md` (Zone B) and mirrors it into `AGENTS.md`.
 
 #### `/catchup` — Onboarding Guide
 
