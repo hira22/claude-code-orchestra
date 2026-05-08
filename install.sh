@@ -14,7 +14,7 @@ TMP_DIR=$(mktemp -d)
 trap "rm -rf $TMP_DIR" EXIT
 
 echo "→ リポジトリをダウンロード中..."
-git clone --depth 1 "$REPO_URL" "$TMP_DIR" 2>/dev/null || {
+git clone --depth 1 "$REPO_URL" "$TMP_DIR" || {
     echo "エラー: リポジトリのクローンに失敗しました"
     exit 1
 }

@@ -12,10 +12,10 @@ gemini -p "Analyze this tutorial video:
 - List step-by-step instructions
 - Note any important warnings or tips
 - Identify timestamps for key sections
-@tutorial.mp4" 2>/dev/null
+@tutorial.mp4"
 
 # Code review video
-gemini -p "Extract code patterns and best practices demonstrated in this video @code-review.mp4" 2>/dev/null
+gemini -p "Extract code patterns and best practices demonstrated in this video @code-review.mp4"
 ```
 
 ## Audio Analysis
@@ -27,10 +27,10 @@ gemini -p "Transcribe and summarize this technical discussion:
 - Action items
 - Open questions
 - Technical terms mentioned
-@meeting.mp3" 2>/dev/null
+@meeting.mp3"
 
 # Podcast/talk analysis
-gemini -p "Extract technical insights from this talk about {topic} @conference-talk.mp3" 2>/dev/null
+gemini -p "Extract technical insights from this talk about {topic} @conference-talk.mp3"
 ```
 
 ## PDF Analysis
@@ -42,7 +42,7 @@ gemini -p "Extract from this API documentation:
 - Request/response schemas
 - Authentication requirements
 - Rate limiting rules
-@api-spec.pdf" 2>/dev/null
+@api-spec.pdf"
 
 # Technical specification
 gemini -p "Summarize this technical specification:
@@ -50,7 +50,7 @@ gemini -p "Summarize this technical specification:
 - Constraints
 - Interface definitions
 - Edge cases to handle
-@spec.pdf" 2>/dev/null
+@spec.pdf"
 
 # Research paper
 gemini -p "Analyze this paper and explain:
@@ -58,7 +58,7 @@ gemini -p "Analyze this paper and explain:
 - Proposed approach
 - Key algorithms
 - How to apply this in practice
-@paper.pdf" 2>/dev/null
+@paper.pdf"
 ```
 
 ## Image / Diagram Analysis
@@ -69,14 +69,14 @@ gemini -p "Analyze this architecture diagram:
 - Components and their responsibilities
 - Data flow between components
 - External dependencies
-@architecture.png" 2>/dev/null
+@architecture.png"
 
 # Chart analysis
 gemini -p "Extract data and trends from this chart:
 - Key metrics
 - Trends over time
 - Notable anomalies
-@dashboard.png" 2>/dev/null
+@dashboard.png"
 ```
 
 ## When NOT to Use Gemini
@@ -96,7 +96,7 @@ gemini -p "Extract data and trends from this chart:
 ### Piping to Files
 
 ```bash
-gemini -p "Extract all API schemas @api-spec.pdf" > docs/api-schemas.md 2>/dev/null
+gemini -p "Extract all API schemas @api-spec.pdf" > docs/api-schemas.md
 ```
 
 ## Rate Limits

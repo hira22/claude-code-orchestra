@@ -13,16 +13,16 @@ Use Gemini CLI to extract and analyze content from files that Claude cannot proc
 
 ```bash
 # PDF
-gemini -p "Extract: {what to extract} @/path/to/file.pdf" 2>/dev/null
+gemini -p "Extract: {what to extract} @/path/to/file.pdf"
 
 # Video
-gemini -p "Summarize: key concepts, decisions, timestamps @/path/to/video.mp4" 2>/dev/null
+gemini -p "Summarize: key concepts, decisions, timestamps @/path/to/video.mp4"
 
 # Audio
-gemini -p "Transcribe and summarize: decisions, action items @/path/to/audio.mp3" 2>/dev/null
+gemini -p "Transcribe and summarize: decisions, action items @/path/to/audio.mp3"
 
 # Image (diagrams, charts)
-gemini -p "Analyze: components, relationships, data flow @/path/to/diagram.png" 2>/dev/null
+gemini -p "Analyze: components, relationships, data flow @/path/to/diagram.png"
 ```
 
 ## Supported File Types (Multimodal)

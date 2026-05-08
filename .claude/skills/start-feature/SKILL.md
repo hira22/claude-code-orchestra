@@ -190,7 +190,7 @@ Spawn two teammates:
    4. Identify risks and mitigation strategies
 
    How to consult Codex:
-   codex exec --model gpt-5.4 --sandbox read-only --full-auto "{question}" 2>/dev/null
+   codex exec --sandbox read-only "{question}"
 
    Update .claude/docs/DESIGN.md with architecture decisions.
 
@@ -275,7 +275,7 @@ Task breakdown should follow `references/task-patterns.md`.
 
 Append the project context to `CLAUDE.md` **Zone C** (the area below the `@orchestra:repo-boundary` marker box) for cross-session persistence. Never touch Zone A or Zone B.
 
-If `@orchestra:repo-boundary` is missing, ask the user to run `./scripts/update.sh` first — the updater migrates legacy layouts automatically.
+If `@orchestra:repo-boundary` is missing, run `/init` to set up the project — `/init` validates and inserts the boundary markers as needed.
 
 ```markdown
 ---

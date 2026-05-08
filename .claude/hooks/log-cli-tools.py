@@ -20,19 +20,23 @@ LOG_FILE = LOG_DIR / "cli-tools.jsonl"
 
 
 def extract_codex_prompt(command: str) -> str | None:
-    """Extract prompt from codex exec command."""
-    # Pattern: codex exec ... "prompt" or codex exec ... 'prompt'
-    patterns = [
-        r'codex\s+exec\s+.*?--full-auto\s+"([^"]+)"',
-        r"codex\s+exec\s+.*?--full-auto\s+'([^']+)'",
-        r'codex\s+exec\s+.*?"([^"]+)"\s*2>/dev/null',
-        r"codex\s+exec\s+.*?'([^']+)'\s*2>/dev/null",
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, command, re.DOTALL)
-        if match:
-            return match.group(1).strip()
-    return None
+    """Extract prompt from a `codex exec` command.
+
+    Returns the longest quoted string found after `codex exec`. The prompt is
+    almost always significantly longer than any flag value (e.g. legacy forms
+    such as `--config model_reasoning_effort="high"` precede the real prompt),
+    so picking the longest quoted segment correctly skips quoted flag values
+    while remaining robust to multi-line, backslash-continued commands.
+    """
+    anchor = re.search(r"codex\s+exec\b", command)
+    if not anchor:
+        return None
+    rest = command[anchor.end():]
+    candidates = re.findall(r'"([^"]+)"', rest)
+    candidates += re.findall(r"'([^']+)'", rest)
+    if not candidates:
+        return None
+    return max(candidates, key=len).strip()
 
 
 def extract_gemini_prompt(command: str) -> str | None:
@@ -99,11 +103,11 @@ def main() -> None:
     if is_codex:
         tool = "codex"
         prompt = extract_codex_prompt(command)
-        model = extract_model(command) or "gpt-5.4"
+        model = extract_model(command) or "default"
     else:
         tool = "gemini"
         prompt = extract_gemini_prompt(command)
-        model = "gemini-3-pro-preview"
+        model = "gemini-3.1-pro-preview"
 
     if not prompt:
         # Could not extract prompt, skip logging

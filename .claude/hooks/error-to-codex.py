@@ -42,6 +42,8 @@ IGNORE_COMMANDS = [
     "which",
     "type",
     "true",
+    "grep",
+    "find",
 ]
 
 # Outputs to ignore (trivial / expected errors)
@@ -104,6 +106,15 @@ def main() -> None:
         tool_response = data.get("tool_response", {})
         command = tool_input.get("command", "")
         tool_output = tool_response.get("stdout", "") or tool_response.get("content", "")
+        # `exit_code` is not part of the documented Bash PostToolUse payload
+        # (per Claude Code hook docs the documented fields are `stdout`,
+        # `stderr`, `interrupted`, `isImage`). Use `.get` without a default
+        # so the guard only short-circuits when the field is *explicitly*
+        # present and zero — never when the field is simply missing, which
+        # would silently disable the hook for the entire Bash path.
+        exit_code = tool_response.get("exit_code")
+        if exit_code == 0:
+            sys.exit(0)
 
         if not command or not tool_output:
             sys.exit(0)

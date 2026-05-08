@@ -62,7 +62,7 @@ Provide:
 ## Example Invocation
 
 ```bash
-codex exec --model gpt-5.4 --sandbox workspace-write --full-auto "
+codex exec --sandbox workspace-write "
 Refactor this code for simplicity:
 
 ## Target Code
@@ -79,7 +79,7 @@ $(cat src/services/llm_client.py)
 - Improve naming
 
 [Principles and patterns as above...]
-" 2>/dev/null
+"
 ```
 
 ## Checklist

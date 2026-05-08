@@ -22,7 +22,7 @@ Zone C — Working state (sessions, features, design pointers)
 
 - Touch ONLY Zone B of `CLAUDE.md`. Never modify Zone A (above `@orchestra:template-boundary`) or Zone C (below `@orchestra:repo-boundary`).
 - For `AGENTS.md`, do NOT modify the "Extensions" section and below — only update the top project-specific sections.
-- If `CLAUDE.md` lacks the 3-zone markers (legacy layout), ask the user to run `./scripts/update.sh` first. Do not hand-insert markers.
+- If `CLAUDE.md` lacks the boundary markers (`@orchestra:template-boundary` and `@orchestra:repo-boundary`), insert them following the pattern at the top of `CLAUDE.md`. Do not improvise the marker format.
 
 ## Steps
 
@@ -58,7 +58,7 @@ First verify the 3-zone markers exist:
 grep -q "@orchestra:template-boundary" CLAUDE.md && grep -q "@orchestra:repo-boundary" CLAUDE.md
 ```
 
-If either marker is missing, stop and ask the user to run `./scripts/update.sh` to migrate the file; the updater auto-migrates legacy single-boundary layouts.
+If either marker is missing, insert them manually following the pattern in `CLAUDE.md`. The two markers (`@orchestra:template-boundary` and `@orchestra:repo-boundary`) define the 3 zones used by `/init` and `/start-feature`.
 
 Replace the content **between** the two markers with the following template (keep the marker lines and their ━ separators intact). Use the Edit tool by anchoring on the full block between the two boundary box lines.
 
