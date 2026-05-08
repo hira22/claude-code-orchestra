@@ -370,10 +370,11 @@ Updates existing documentation in `.claude/docs/libraries/` with the latest info
 
 #### `/checkpointing` — Session Persistence
 
-Records all session activity (git history, CLI consultations, Agent Teams activity, design decisions) and discovers reusable skill patterns. Runs everything in a single pass — no flags needed.
+Records all session activity (git history, CLI consultations, Agent Teams activity, design decisions) and discovers reusable skill patterns.
 
 ```bash
-/checkpointing
+/checkpointing                       # Full recording + pattern discovery
+/checkpointing --since "YYYY-MM-DD"  # Only activity since a specific date
 ```
 
 #### `/init` — Project Initialization
