@@ -1,6 +1,6 @@
 ---
 name: design-tracker
-description: PROACTIVELY track and document project design decisions without being asked. Activate automatically when detecting architecture discussions, implementation decisions, pattern choices, library selections, or any technical decisions. Also use when user explicitly says "record this", "what's our design status", or equivalent. Do NOT wait for user to ask - record important decisions immediately.
+description: Track and document design decisions. Auto-activates on architecture discussions.
 ---
 
 # Design Tracker Skill
@@ -17,9 +17,10 @@ This skill manages the project's design documentation (`.claude/docs/DESIGN.md`)
 
 - User discusses architecture or design patterns
 - User makes implementation decisions (e.g., "let's use ReAct pattern")
-- User says "record this", "add to design", "document this"
+- User says "record this", "add to design", "document this", "update design"
 - User asks "what's our current design?" or "what have we decided?"
 - Important technical decisions are made during conversation
+- User explicitly invokes via `/design-tracker [optional content]`
 
 ## Workflow
 
@@ -29,6 +30,8 @@ This skill manages the project's design documentation (`.claude/docs/DESIGN.md`)
 2. Extract the decision/information from conversation
 3. Update the appropriate section
 4. Add entry to Changelog with today's date
+
+If `$ARGUMENTS` is provided (explicit invocation), focus on recording that specific content.
 
 ### Sections to Update
 
@@ -41,6 +44,31 @@ This skill manages the project's design documentation (`.claude/docs/DESIGN.md`)
 | Why we chose X over Y | Implementation Plan > Key Decisions |
 | Things to implement later | TODO |
 | Unresolved questions | Open Questions |
+
+### Update Format
+
+When updating, append to the appropriate section using:
+
+```markdown
+### Key Decisions
+
+#### {Decision Title} ({Date})
+
+**Context**: {Why this decision was needed}
+**Decision**: {What was decided}
+**Rationale**: {Why this option was chosen}
+```
+
+### Changelog Entry
+
+Always add to the Changelog section:
+
+```markdown
+## Changelog
+
+### {Date}
+- {Brief description of what was recorded}
+```
 
 ## Output Format
 
@@ -55,3 +83,9 @@ When recording, confirm in Japanese:
 - **Code examples**: English
 - **Document content**: English (technical terms) + Japanese (descriptions OK)
 - **User communication**: Japanese
+
+## Migration Note
+
+The standalone `update-design` skill has been merged into this one. Both
+auto-trigger (architecture/decision keywords) and explicit invocation
+(`/design-tracker [content]`) flow through this single skill.
