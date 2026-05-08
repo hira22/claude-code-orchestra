@@ -1,12 +1,6 @@
 ---
 name: spike
-description: |
-  Time-boxed technical investigation/feasibility study with Codex-first multi-agent collaboration (Codex + Opus 4.6 + Agent Teams).
-  Codex CLI is consulted in EVERY phase for question framing, feasibility analysis, and final evaluation.
-  Phase 1: Frame the investigation question & constraints (Claude user interaction + Codex question decomposition).
-  Phase 2: Parallel investigation (Agent Teams: Researcher [Opus external research] + Feasibility Analyst [Codex deep analysis] + optional prototype).
-  Phase 3: Codex synthesis into go/no-go recommendation & research report.
-  Produces a DECISION DOCUMENT, NOT an implementation plan. Use /add-feature or /start-feature after a GO decision.
+description: Time-boxed feasibility investigation producing a go/no-go decision document.
 metadata:
   short-description: Codex-first time-boxed technical investigation with Agent Teams (Decision phase)
 ---

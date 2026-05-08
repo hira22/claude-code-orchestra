@@ -1,11 +1,6 @@
 ---
 name: gemini-system
-description: |
-  Gemini CLI specialized for multimodal file processing only.
-  MUST use when PDF, video, audio, or image files need content extraction.
-  Auto-triggers: file extensions .pdf, .mp4, .mov, .mp3, .wav, .m4a.
-  For research/codebase analysis → use general-purpose subagent (Opus) instead.
-  Planning/design → use Codex instead.
+description: Gemini CLI for multimodal files (PDF, video, audio, image) content extraction.
 metadata:
   short-description: Gemini CLI — multimodal file processing (PDF/video/audio/image)
 ---

@@ -1,11 +1,6 @@
 ---
 name: add-feature
-description: |
-  Add a feature to an existing codebase with Codex-first multi-agent collaboration (Codex + Opus 4.6).
-  Codex CLI is consulted in EVERY phase for scope analysis, architecture design, and implementation planning.
-  Phase 1: Scope & impact analysis (Opus subagent codebase scan + Codex scope analysis + Claude user clarification).
-  Phase 2: Design & plan (Codex architecture design + Codex implementation plan + Codex validation).
-  Phase 3: Implementation routing by complexity (SIMPLE: Codex direct, MODERATE: Codex + /team-review, COMPLEX: /team-implement).
+description: Add a feature to an existing codebase with scope analysis and design validation.
 metadata:
   short-description: Codex-first feature addition with complexity-based implementation routing
 ---

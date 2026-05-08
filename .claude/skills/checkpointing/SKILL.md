@@ -1,10 +1,6 @@
 ---
 name: checkpointing
-description: |
-  Save full session context: git history, CLI consultations, Agent Teams activity,
-  and discover reusable skill patterns — all in one run.
-  Optional `--since YYYY-MM-DD` narrows the scope to recent activity.
-  Run at session end, after major milestones, or when you want to capture learnings.
+description: Save session context (git history, agent activity, skill patterns). Supports --since.
 metadata:
   short-description: Full session checkpoint with skill pattern discovery
 ---

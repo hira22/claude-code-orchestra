@@ -1,12 +1,6 @@
 ---
 name: catchup
-description: |
-  Comprehensive onboarding for new or returning contributors.
-  Scans repository artifacts (git history, CLAUDE.md / AGENTS.md,
-  project rules, skill catalog, DESIGN.md, research & library notes,
-  checkpoints, agent-team logs) and synthesizes a GUIDE.md at the
-  repository root summarizing what has been worked on, why, and how
-  to resume work.
+description: Onboarding scan that synthesizes repo artifacts into GUIDE.md for contributors.
 metadata:
   short-description: Produce GUIDE.md summarizing past work for new/returning contributors
 ---
