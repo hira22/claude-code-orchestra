@@ -1,6 +1,6 @@
 ---
 name: gemini-system
-description: Gemini CLI for multimodal files (PDF, video, audio, image) content extraction.
+description: Gemini CLI for content extraction from PDF/video/audio/image files. Use only when an actual file is present; research/codebase analysis → general-purpose subagent.
 metadata:
   short-description: Gemini CLI — multimodal file processing (PDF/video/audio/image)
 ---

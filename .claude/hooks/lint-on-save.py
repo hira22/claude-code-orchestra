@@ -13,7 +13,9 @@ import subprocess
 import sys
 
 MAX_PATH_LENGTH = 4096
-SUBPROCESS_TIMEOUT = 15
+SUBPROCESS_TIMEOUT = (
+    30  # cold-start `uv run ruff/ty` can exceed 15s on first invocation
+)
 
 
 def validate_path(file_path: str) -> bool:
