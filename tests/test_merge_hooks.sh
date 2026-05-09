@@ -216,6 +216,120 @@ run_case "T6 first-seen matcher order preserved (no alpha sort)" \
   ]
 }'
 
+# ─────────────────────────────────────────────────────────────────────────────
+# T7: hook execution order preserved when deduping multi-command hooks.
+# The old `unique_by(.command)` would alpha-sort the array on every merge,
+# silently reordering hook execution. The new insertion-order reduce must
+# return the input list unchanged for an idempotent self-merge.
+# Commands deliberately listed in non-alphabetical order to expose the bug.
+# ─────────────────────────────────────────────────────────────────────────────
+ORDER_INPUT='{
+  "hooks": {
+    "PostToolUse": [
+      { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "zebra.py", "timeout": 5 },
+        { "type": "command", "command": "alpha.py", "timeout": 5 },
+        { "type": "command", "command": "mango.py", "timeout": 5 }
+      ] }
+    ]
+  }
+}'
+ORDER_EXPECTED='{
+  "PostToolUse": [
+    { "matcher": "Bash", "hooks": [
+      { "type": "command", "command": "zebra.py", "timeout": 5 },
+      { "type": "command", "command": "alpha.py", "timeout": 5 },
+      { "type": "command", "command": "mango.py", "timeout": 5 }
+    ] }
+  ]
+}'
+run_case "T7 hook order preserved on idempotent multi-command merge" \
+    "$ORDER_INPUT" "$ORDER_INPUT" "$ORDER_EXPECTED"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# T8: prune_settings_hooks_for_paths matches on path boundaries.
+# Deleting `.claude/hooks/foo.py` must NOT prune a still-present command
+# referencing `.claude/hooks/foo-old/run.py` (substring overlap).
+# ─────────────────────────────────────────────────────────────────────────────
+T8_INPUT="$(mktemp)"
+T8_ACTUAL="$(mktemp)"
+cat > "$T8_INPUT" <<'JSON'
+{
+  "hooks": {
+    "PostToolUse": [
+      { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/foo.py\"", "timeout": 5 },
+        { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/foo-old/run.py\"", "timeout": 5 }
+      ] }
+    ]
+  }
+}
+JSON
+prune_settings_hooks_for_paths "$T8_INPUT" '[".claude/hooks/foo.py"]' "$T8_ACTUAL"
+T8_EXPECTED='{
+  "PostToolUse": [
+    { "matcher": "Bash", "hooks": [
+      { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/foo-old/run.py\"", "timeout": 5 }
+    ] }
+  ]
+}'
+T8_ACTUAL_HOOKS=$(jq -S '.hooks' "$T8_ACTUAL")
+T8_EXPECTED_HOOKS=$(printf '%s' "$T8_EXPECTED" | jq -S '.')
+if [ "$T8_ACTUAL_HOOKS" = "$T8_EXPECTED_HOOKS" ]; then
+    PASS=$((PASS + 1))
+    echo "✓ T8 prune respects path boundary (foo vs foo-old)"
+else
+    FAIL=$((FAIL + 1))
+    FAILED_NAMES+=("T8 prune respects path boundary (foo vs foo-old)")
+    echo "✗ T8 prune respects path boundary (foo vs foo-old)"
+    echo "  --- expected ---"
+    printf '%s\n' "$T8_EXPECTED_HOOKS" | sed 's/^/  /'
+    echo "  --- actual ---"
+    printf '%s\n' "$T8_ACTUAL_HOOKS" | sed 's/^/  /'
+fi
+rm -f "$T8_INPUT" "$T8_ACTUAL"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# T9: prune with directory-prefix path (Case A: __ALL__ → ".claude/hooks/").
+# Every command containing the directory prefix should be pruned.
+# ─────────────────────────────────────────────────────────────────────────────
+T9_INPUT="$(mktemp)"
+T9_ACTUAL="$(mktemp)"
+cat > "$T9_INPUT" <<'JSON'
+{
+  "hooks": {
+    "PostToolUse": [
+      { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/a.py\"", "timeout": 5 },
+        { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/lib/b.py\"", "timeout": 5 }
+      ] },
+      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "echo unrelated", "timeout": 5 }] }
+    ]
+  }
+}
+JSON
+prune_settings_hooks_for_paths "$T9_INPUT" '[".claude/hooks/"]' "$T9_ACTUAL"
+T9_EXPECTED='{
+  "PostToolUse": [
+    { "matcher": "Bash", "hooks": [{ "type": "command", "command": "echo unrelated", "timeout": 5 }] }
+  ]
+}'
+T9_ACTUAL_HOOKS=$(jq -S '.hooks' "$T9_ACTUAL")
+T9_EXPECTED_HOOKS=$(printf '%s' "$T9_EXPECTED" | jq -S '.')
+if [ "$T9_ACTUAL_HOOKS" = "$T9_EXPECTED_HOOKS" ]; then
+    PASS=$((PASS + 1))
+    echo "✓ T9 prune with directory-prefix path removes all descendants"
+else
+    FAIL=$((FAIL + 1))
+    FAILED_NAMES+=("T9 prune directory-prefix")
+    echo "✗ T9 prune with directory-prefix path removes all descendants"
+    echo "  --- expected ---"
+    printf '%s\n' "$T9_EXPECTED_HOOKS" | sed 's/^/  /'
+    echo "  --- actual ---"
+    printf '%s\n' "$T9_ACTUAL_HOOKS" | sed 's/^/  /'
+fi
+rm -f "$T9_INPUT" "$T9_ACTUAL"
+
 echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -ne 0 ]; then

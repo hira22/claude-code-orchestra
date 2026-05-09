@@ -40,16 +40,30 @@ merge_settings_json() {
                 | [($b // [])[] | select((.matcher // "") == $m)] as $bentries
                 | ($aentries | map(.hooks // []) | add // []) as $ahooks
                 | ($bentries | map(.hooks // []) | add // []) as $bhooks
-                # Use template wrapper if present; replace its .hooks with the
-                # template-first union deduped by .command. Template-first
-                # ordering means template wins on timeout / other field
-                # conflicts for the same command.
+                # Use template wrapper if present; replace its .hooks with
+                # the template-first union deduped by .command. Dedupe with
+                # a manual reduce (insertion-order preserving) instead of
+                # `unique_by` because the latter alpha-sorts the array and
+                # silently changes the order in which Claude executes hooks.
+                # Template entries come first via `$bhooks + $ahooks`, so
+                # they win on field conflicts (timeout, etc.) for the same
+                # command.
                 | if ($bentries | length) > 0 then
                     $bentries[0]
-                    | .hooks = (($bhooks + $ahooks) | unique_by(.command // ""))
+                    | .hooks = (
+                        ($bhooks + $ahooks)
+                        | reduce .[] as $h ([];
+                            if any(.command == $h.command) then .
+                            else . + [$h] end)
+                    )
                   else
                     $aentries[0]
-                    | .hooks = ($ahooks | unique_by(.command // ""))
+                    | .hooks = (
+                        $ahooks
+                        | reduce .[] as $h ([];
+                            if any(.command == $h.command) then .
+                            else . + [$h] end)
+                    )
                   end
             );
 
@@ -71,6 +85,48 @@ merge_settings_json() {
             env: (($existing.env // {}) + ($template.env // {}))
         }
     ' "$existing" "$template" > "$output"
+}
+
+# Drop entries from settings.json `.hooks[][] | .hooks[]` whose `.command`
+# references any path in $paths_json. Used by --clean to keep settings in
+# sync after a hook script has been removed from disk.
+#
+# $paths_json is a JSON array of strings. A path ending with "/" matches by
+# prefix (used when the entire .claude/hooks/ directory was removed). A
+# path NOT ending with "/" requires a path boundary after the match (",
+# /, space, or end-of-string) so deleting `.claude/hooks/foo` does not
+# accidentally prune a still-present `.claude/hooks/foo-old/run.py`.
+prune_settings_hooks_for_paths() {
+    local settings="$1"
+    local paths_json="$2"
+    local output="$3"
+
+    jq --argjson paths "$paths_json" '
+        def has_deleted($cmd):
+            $paths | any(. as $p |
+                if $p | endswith("/") then
+                    $cmd | contains($p)
+                else
+                    ($cmd | endswith($p))
+                    or ($cmd | contains($p + "\""))
+                    or ($cmd | contains($p + "/"))
+                    or ($cmd | contains($p + " "))
+                end
+            );
+
+        if .hooks then
+            .hooks |= with_entries(
+                .value |= (
+                    map(
+                        .hooks |= map(select(has_deleted(.command // "") | not))
+                        | select(.hooks | length > 0)
+                    )
+                )
+            )
+            | .hooks |= with_entries(select(.value | length > 0))
+        else .
+        end
+    ' "$settings" > "$output"
 }
 
 # Source guard: when sourced (e.g. by tests/test_merge_hooks.sh) only the
@@ -250,23 +306,8 @@ if [ -d ".claude" ]; then
                     | jq -s '.')
             fi
 
-            jq --argjson paths "$paths_json" '
-                def has_deleted($cmd):
-                    $paths | any(. as $p | $cmd | contains($p));
-
-                if .hooks then
-                    .hooks |= with_entries(
-                        .value |= (
-                            map(
-                                .hooks |= map(select(has_deleted(.command // "") | not))
-                                | select(.hooks | length > 0)
-                            )
-                        )
-                    )
-                    | .hooks |= with_entries(select(.value | length > 0))
-                else .
-                end
-            ' .claude/settings.json > .claude/settings.json.tmp \
+            prune_settings_hooks_for_paths .claude/settings.json "$paths_json" \
+                .claude/settings.json.tmp \
                 && mv .claude/settings.json.tmp .claude/settings.json
             echo "✓ settings.json から削除済み hook の参照を除去しました"
         fi
