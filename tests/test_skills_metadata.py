@@ -33,7 +33,9 @@ def test_expected_skill_count_after_pr2_merge(skill_dirs: list[Path]):
     assert len(skill_dirs) == EXPECTED_SKILL_COUNT, (
         f"Expected {EXPECTED_SKILL_COUNT} skills after PR #2, got {len(skill_dirs)}: {names}"
     )
-    assert "update-design" not in names, "update-design should be merged into design-tracker"
+    assert "update-design" not in names, (
+        "update-design should be merged into design-tracker"
+    )
     assert "design-tracker" in names
 
 
@@ -46,7 +48,9 @@ def test_every_skill_md_has_required_frontmatter_keys(skill_dirs: list[Path]):
     for skill_dir in skill_dirs:
         meta = _load_frontmatter(skill_dir / "SKILL.md")
         assert "name" in meta, f"{skill_dir.name}: missing 'name' in frontmatter"
-        assert "description" in meta, f"{skill_dir.name}: missing 'description' in frontmatter"
+        assert "description" in meta, (
+            f"{skill_dir.name}: missing 'description' in frontmatter"
+        )
         assert isinstance(meta["name"], str) and meta["name"].strip()
         assert isinstance(meta["description"], str) and meta["description"].strip()
 

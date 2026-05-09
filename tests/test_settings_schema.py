@@ -10,7 +10,7 @@ import pytest
 
 SETTINGS_REL_PATH = Path(".claude") / "settings.json"
 HOOK_PATH_PATTERN = re.compile(
-    r'\$CLAUDE_PROJECT_DIR/\.claude/hooks/(?P<name>[\w./-]+\.py)'
+    r"\$CLAUDE_PROJECT_DIR/\.claude/hooks/(?P<name>[\w./-]+\.py)"
 )
 ECHO_INLINE_PATTERN = re.compile(r"^echo\s+'(.+)'\s*$", re.DOTALL)
 
@@ -64,7 +64,9 @@ def test_hook_timeouts_are_positive_ints_when_present(settings: dict):
         if "timeout" not in entry:
             continue
         timeout = entry["timeout"]
-        assert isinstance(timeout, int), f"{event}: timeout must be int, got {type(timeout)}"
+        assert isinstance(timeout, int), (
+            f"{event}: timeout must be int, got {type(timeout)}"
+        )
         assert timeout > 0, f"{event}: timeout must be positive, got {timeout}"
 
 
@@ -100,7 +102,9 @@ def test_inline_echo_commands_emit_valid_json(settings: dict):
         try:
             parsed = json.loads(match.group(1))
         except json.JSONDecodeError as exc:
-            pytest.fail(f"{event}: inline echo command emits invalid JSON: {exc}\n{cmd}")
+            pytest.fail(
+                f"{event}: inline echo command emits invalid JSON: {exc}\n{cmd}"
+            )
         assert isinstance(parsed, dict), f"{event}: inline echo must emit a JSON object"
 
 

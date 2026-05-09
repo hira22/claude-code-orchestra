@@ -23,7 +23,9 @@ def _payload(command: str, stdout: str, exit_code: int = 1) -> dict:
 
 
 def test_detects_python_traceback(error_detector):
-    output = "Traceback (most recent call last):\n  File 'a.py', line 1\nValueError: bad"
+    output = (
+        "Traceback (most recent call last):\n  File 'a.py', line 1\nValueError: bad"
+    )
     result = error_detector.check(_payload("python a.py", output))
     assert result is not None
     assert "Error Detected" in result["additionalContext"]

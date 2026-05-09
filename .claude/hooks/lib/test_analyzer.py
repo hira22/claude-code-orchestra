@@ -68,7 +68,9 @@ def _has_complex_failure(output: str) -> tuple[bool, str]:
     if failure_count >= 3:
         return True, f"Multiple failures detected ({failure_count} issues)"
 
-    if failure_count >= 1 and any(p in output.lower() for p in ["traceback", "assertion"]):
+    if failure_count >= 1 and any(
+        p in output.lower() for p in ["traceback", "assertion"]
+    ):
         return True, "Test failure with traceback"
 
     return False, ""

@@ -51,12 +51,16 @@ def main() -> None:
     if not contexts:
         sys.exit(0)
 
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": event_name,
-            "additionalContext": "\n".join(contexts),
-        }
-    }))
+    print(
+        json.dumps(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": event_name,
+                    "additionalContext": "\n".join(contexts),
+                }
+            }
+        )
+    )
 
 
 if __name__ == "__main__":

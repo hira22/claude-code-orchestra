@@ -77,7 +77,9 @@ def test_git_status_payload_short_circuits(hook_runner):
     )
 
 
-def test_codex_payload_triggers_only_cli_logger(hook_runner, tmp_path: Path, project_root: Path):
+def test_codex_payload_triggers_only_cli_logger(
+    hook_runner, tmp_path: Path, project_root: Path
+):
     """codex exec payload triggers cli_logger; error/test handlers skip codex commands."""
     payload = _bash_payload(
         command='codex exec --sandbox read-only "What is 2+2?"',

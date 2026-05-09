@@ -28,7 +28,9 @@ def test_design_indicator_in_path_triggers_suggestion(hook_runner):
     assert result.returncode == 0
     out = _parse(result.stdout)
     assert out is not None
-    assert "Codex Consultation Reminder" in out["hookSpecificOutput"]["additionalContext"]
+    assert (
+        "Codex Consultation Reminder" in out["hookSpecificOutput"]["additionalContext"]
+    )
 
 
 def test_path_traversal_silently_skipped(hook_runner):

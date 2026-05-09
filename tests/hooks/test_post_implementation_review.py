@@ -30,7 +30,10 @@ def _parse(stdout: str) -> dict | None:
 
 
 def _payload(file_path: str, content: str = "x = 1") -> dict:
-    return {"tool_name": "Write", "tool_input": {"file_path": file_path, "content": content}}
+    return {
+        "tool_name": "Write",
+        "tool_input": {"file_path": file_path, "content": content},
+    }
 
 
 def test_non_write_edit_tool_skipped(hook_runner):
@@ -52,7 +55,9 @@ def test_three_files_triggers_review_suggestion(hook_runner):
     for i in range(2):
         result = hook_runner(HOOK, _payload(f"src/file_{i}.py", "x = 1"))
         assert result.returncode == 0
-        assert result.stdout.strip() == "", "First two edits should not yet suggest review"
+        assert result.stdout.strip() == "", (
+            "First two edits should not yet suggest review"
+        )
 
     result = hook_runner(HOOK, _payload("src/file_2.py", "x = 1"))
     assert result.returncode == 0

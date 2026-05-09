@@ -43,7 +43,14 @@ def _grep_rule_references(root: Path) -> set[str]:
     """Find every `.claude/rules/<name>.md` reference under the project."""
     pattern = re.compile(r"\.claude/rules/([\w-]+\.md)")
     found: set[str] = set()
-    skip_dirs = {".git", "node_modules", ".venv", "__pycache__", ".pytest_cache", "tests"}
+    skip_dirs = {
+        ".git",
+        "node_modules",
+        ".venv",
+        "__pycache__",
+        ".pytest_cache",
+        "tests",
+    }
     for path in root.rglob("*"):
         if not path.is_file():
             continue

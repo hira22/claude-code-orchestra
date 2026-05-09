@@ -30,7 +30,7 @@ def extract_codex_prompt(command: str) -> str | None:
     anchor = re.search(r"codex\s+exec\b", command)
     if not anchor:
         return None
-    rest = command[anchor.end():]
+    rest = command[anchor.end() :]
     candidates = re.findall(r'"([^"]+)"', rest)
     candidates += re.findall(r"'([^']+)'", rest)
     if not candidates:

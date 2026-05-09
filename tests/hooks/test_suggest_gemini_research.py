@@ -48,7 +48,10 @@ def test_long_query_triggers_suggestion(hook_runner):
 def test_web_fetch_routing(hook_runner):
     payload = {
         "tool_name": "WebFetch",
-        "tool_input": {"url": "https://docs.example.com/library/api", "prompt": "find best practice"},
+        "tool_input": {
+            "url": "https://docs.example.com/library/api",
+            "prompt": "find best practice",
+        },
     }
     result = hook_runner(HOOK, payload)
     assert result.returncode == 0

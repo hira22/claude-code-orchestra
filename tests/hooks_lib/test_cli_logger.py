@@ -45,7 +45,10 @@ def test_codex_command_extraction_picks_longest_quoted_segment(cli_logger):
 def test_gemini_command_extraction(cli_logger):
     mod, _ = cli_logger
     assert mod.extract_gemini_prompt('gemini -p "summarize this"') == "summarize this"
-    assert mod.extract_gemini_prompt("gemini -p 'transcribe @audio.mp3'") == "transcribe @audio.mp3"
+    assert (
+        mod.extract_gemini_prompt("gemini -p 'transcribe @audio.mp3'")
+        == "transcribe @audio.mp3"
+    )
     assert mod.extract_gemini_prompt("gemini --version") is None
 
 

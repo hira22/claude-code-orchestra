@@ -13,7 +13,9 @@ def _parse(stdout: str) -> dict | None:
 
 
 def test_non_task_tool_skipped(hook_runner):
-    result = hook_runner(HOOK, {"tool_name": "Bash", "tool_input": {"description": "design plan"}})
+    result = hook_runner(
+        HOOK, {"tool_name": "Bash", "tool_input": {"description": "design plan"}}
+    )
     assert result.returncode == 0
     assert result.stdout.strip() == ""
 
@@ -33,7 +35,10 @@ def test_plan_subagent_triggers_suggestion(hook_runner):
 def test_plan_keyword_in_description_triggers_suggestion(hook_runner):
     payload = {
         "tool_name": "Task",
-        "tool_input": {"subagent_type": "general-purpose", "description": "design new module"},
+        "tool_input": {
+            "subagent_type": "general-purpose",
+            "description": "design new module",
+        },
     }
     result = hook_runner(HOOK, payload)
     assert result.returncode == 0
@@ -44,7 +49,10 @@ def test_plan_keyword_in_description_triggers_suggestion(hook_runner):
 def test_neutral_task_emits_nothing(hook_runner):
     payload = {
         "tool_name": "Task",
-        "tool_input": {"subagent_type": "general-purpose", "description": "just say hi"},
+        "tool_input": {
+            "subagent_type": "general-purpose",
+            "description": "just say hi",
+        },
     }
     result = hook_runner(HOOK, payload)
     assert result.returncode == 0
