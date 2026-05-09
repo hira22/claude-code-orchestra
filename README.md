@@ -131,7 +131,7 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │   │   ├── codex-debugger.md    # Error analysis agent (Opus)
 │   │   └── gemini-explore.md    # Multimodal processing agent (Opus)
 │   │
-│   ├── skills/                  # Reusable workflows (18 total)
+│   ├── skills/                  # Reusable workflows (17 total)
 │   │   ├── start-feature/       # Start feature with multi-agent coordination
 │   │   ├── team-implement/      # Parallel implementation with Agent Teams
 │   │   ├── team-review/         # Parallel review with Agent Teams
@@ -150,10 +150,11 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │   │   ├── init/                # Project initialization
 │   │   └── troubleshoot/        # Error diagnosis & fix planning
 │   │
-│   ├── hooks/                   # Automation hooks (9 total)
+│   ├── hooks/                   # Automation hooks (8 total)
 │   │   ├── agent-router.py      # Agent routing
 │   │   ├── lint-on-save.py      # Auto-lint on save
 │   │   ├── bash-postdispatch.py # PostToolUse:Bash dispatcher (error/test/log)
+│   │   ├── lib/                 # Shared helpers (error_detector, test_analyzer, cli_logger)
 │   │   └── ...
 │   │
 │   ├── rules/                   # Development guidelines
@@ -171,6 +172,15 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │   │
 │   └── logs/                    # Runtime generated (.gitignore target)
 │       └── cli-tools.jsonl      # Codex/Gemini I/O logs
+│
+├── tests/                       # Test suite (pytest)
+│   ├── conftest.py
+│   ├── hooks/                   # Hook unit tests
+│   └── hooks_lib/               # Hook lib unit tests
+│
+├── .github/
+│   └── workflows/
+│       └── test.yml             # CI: lint + test
 │
 ├── .codex/                      # Codex CLI configuration
 │   ├── AGENTS.md
