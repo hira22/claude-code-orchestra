@@ -129,6 +129,11 @@ if [ -d ".claude" ]; then
         echo "→ --clean: テンプレートに存在しないファイル/ディレクトリを検出中..."
         echo "  （注: 手動で追加したファイルもここに含まれます）"
         dirs_with_orphans=0
+        # Newline-delimited list of hook paths whose scripts were just deleted.
+        # Used after the loop to prune matching entries from .claude/settings.json
+        # so the subsequent jq merge does not retain stale references.
+        # Sentinel "__ALL__" means the entire .claude/hooks/ directory was removed.
+        deleted_hook_paths=""
         for dir in skills hooks rules agents docs; do
             [ -d ".claude/$dir" ] || continue
 
@@ -142,6 +147,10 @@ if [ -d ".claude" ]; then
                 if [ "$response" = "y" ]; then
                     rm -rf ".claude/$dir"
                     echo "✓ 削除しました"
+                    if [ "$dir" = "hooks" ]; then
+                        deleted_hook_paths="${deleted_hook_paths}${deleted_hook_paths:+
+}__ALL__"
+                    fi
                 else
                     echo "→ スキップしました"
                 fi
@@ -175,6 +184,10 @@ if [ -d ".claude" ]; then
                         rm -rf ".claude/$dir/$p"
                     done <<< "$orphans"
                     echo "✓ 削除しました"
+                    if [ "$dir" = "hooks" ]; then
+                        deleted_hook_paths="${deleted_hook_paths}${deleted_hook_paths:+
+}$orphans"
+                    fi
                 else
                     echo "→ スキップしました"
                 fi
@@ -182,6 +195,41 @@ if [ -d ".claude" ]; then
         done
         if [ "$dirs_with_orphans" -eq 0 ]; then
             echo "→ 削除対象なし"
+        fi
+
+        # Prune .claude/settings.json hook entries that point to scripts we
+        # just deleted, so the subsequent merge_settings_json union doesn't
+        # re-introduce dangling references from the existing config.
+        if [ -n "$deleted_hook_paths" ] \
+           && [ "$JQ_AVAILABLE" = true ] \
+           && [ -f ".claude/settings.json" ]; then
+            if echo "$deleted_hook_paths" | grep -qx "__ALL__"; then
+                paths_json='[".claude/hooks/"]'
+            else
+                paths_json=$(printf '%s\n' "$deleted_hook_paths" \
+                    | jq -R 'select(length > 0) | ".claude/hooks/" + .' \
+                    | jq -s '.')
+            fi
+
+            jq --argjson paths "$paths_json" '
+                def has_deleted($cmd):
+                    $paths | any(. as $p | $cmd | contains($p));
+
+                if .hooks then
+                    .hooks |= with_entries(
+                        .value |= (
+                            map(
+                                .hooks |= map(select(has_deleted(.command // "") | not))
+                                | select(.hooks | length > 0)
+                            )
+                        )
+                    )
+                    | .hooks |= with_entries(select(.value | length > 0))
+                else .
+                end
+            ' .claude/settings.json > .claude/settings.json.tmp \
+                && mv .claude/settings.json.tmp .claude/settings.json
+            echo "✓ settings.json から削除済み hook の参照を除去しました"
         fi
     fi
 
