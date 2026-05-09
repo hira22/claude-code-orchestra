@@ -7,10 +7,139 @@
 #   orchestra-init --ref v1.0               # Pin to specific version
 #   ORCHESTRA_REPO=<url> orchestra-init     # Use custom repository
 
+# settings.json merge function (defined first so the script can be sourced
+# for testing without triggering CLI execution).
+merge_settings_json() {
+    local existing="$1"
+    local template="$2"
+    local output="$3"
+
+    jq -s '
+        .[0] as $existing |
+        .[1] as $template |
+
+        def merge_hooks($a; $b):
+            # Build a list of matchers in first-seen order across both sides
+            # (jq `unique` would alpha-sort and create churn-y diffs, so we
+            # use a manual reduce that preserves insertion order).
+            # Each comma branch needs its own parens — without them jq parses
+            # `expr | f, g` as `expr | (f, g)` and tries to apply g downstream.
+            (
+                [
+                    (($a // [])[] | (.matcher // "")),
+                    (($b // [])[] | (.matcher // ""))
+                ]
+                | reduce .[] as $m ([]; if any(. == $m) then . else . + [$m] end)
+            ) as $matchers
+            | $matchers | map(
+                . as $m
+                # Collect ALL entries with this matcher from each side.
+                # Picking only `first` would silently drop hooks from
+                # additional same-matcher entries (data loss).
+                | [($a // [])[] | select((.matcher // "") == $m)] as $aentries
+                | [($b // [])[] | select((.matcher // "") == $m)] as $bentries
+                | ($aentries | map(.hooks // []) | add // []) as $ahooks
+                | ($bentries | map(.hooks // []) | add // []) as $bhooks
+                # Use template wrapper if present; replace its .hooks with
+                # the template-first union deduped by .command. Dedupe with
+                # a manual reduce (insertion-order preserving) instead of
+                # `unique_by` because the latter alpha-sorts the array and
+                # silently changes the order in which Claude executes hooks.
+                # Template entries come first via `$bhooks + $ahooks`, so
+                # they win on field conflicts (timeout, etc.) for the same
+                # command.
+                | if ($bentries | length) > 0 then
+                    $bentries[0]
+                    | .hooks = (
+                        ($bhooks + $ahooks)
+                        | reduce .[] as $h ([];
+                            if any(.command == $h.command) then .
+                            else . + [$h] end)
+                    )
+                  else
+                    $aentries[0]
+                    | .hooks = (
+                        $ahooks
+                        | reduce .[] as $h ([];
+                            if any(.command == $h.command) then .
+                            else . + [$h] end)
+                    )
+                  end
+            );
+
+        (($template // {}) | del(.hooks, .permissions, .env))
+        * (($existing // {}) | del(.hooks, .permissions, .env))
+        + {
+            hooks: (
+                (($existing.hooks // {}) | keys) + (($template.hooks // {}) | keys) | unique
+                | reduce .[] as $key ({}; . + {
+                    ($key): merge_hooks($existing.hooks[$key]; $template.hooks[$key])
+                })
+            ),
+            permissions: {
+                allow: (($existing.permissions.allow // []) + ($template.permissions.allow // [])) | unique,
+                deny: (($existing.permissions.deny // []) + ($template.permissions.deny // [])) | unique,
+                ask: ($existing.permissions.ask // []),
+                defaultMode: ($existing.permissions.defaultMode // "default")
+            },
+            env: (($existing.env // {}) + ($template.env // {}))
+        }
+    ' "$existing" "$template" > "$output"
+}
+
+# Drop entries from settings.json `.hooks[][] | .hooks[]` whose `.command`
+# references any path in $paths_json. Used by --clean to keep settings in
+# sync after a hook script has been removed from disk.
+#
+# $paths_json is a JSON array of strings. A path ending with "/" matches by
+# prefix (used when the entire .claude/hooks/ directory was removed). A
+# path NOT ending with "/" requires a path boundary after the match (",
+# /, space, or end-of-string) so deleting `.claude/hooks/foo` does not
+# accidentally prune a still-present `.claude/hooks/foo-old/run.py`.
+prune_settings_hooks_for_paths() {
+    local settings="$1"
+    local paths_json="$2"
+    local output="$3"
+
+    jq --argjson paths "$paths_json" '
+        def has_deleted($cmd):
+            $paths | any(. as $p |
+                if $p | endswith("/") then
+                    $cmd | contains($p)
+                else
+                    ($cmd | endswith($p))
+                    or ($cmd | contains($p + "\""))
+                    or ($cmd | contains($p + "/"))
+                    or ($cmd | contains($p + " "))
+                end
+            );
+
+        if .hooks then
+            .hooks |= with_entries(
+                .value |= (
+                    map(
+                        .hooks |= map(select(has_deleted(.command // "") | not))
+                        | select(.hooks | length > 0)
+                    )
+                )
+            )
+            | .hooks |= with_entries(select(.value | length > 0))
+        else .
+        end
+    ' "$settings" > "$output"
+}
+
+# Source guard: when sourced (e.g. by tests/test_merge_hooks.sh) only the
+# function definitions above are loaded; the CLI flow below is skipped.
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    return 0
+fi
+
 set -e
 
 REPO_URL="${ORCHESTRA_REPO:-https://github.com/hira22/claude-code-orchestra}"
 TARGET_REF=""
+CLEAN_MODE=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -23,12 +152,17 @@ while [[ $# -gt 0 ]]; do
             TARGET_REF="$2"
             shift 2
             ;;
+        --clean)
+            CLEAN_MODE=true
+            shift
+            ;;
         -h|--help)
             echo "Usage: orchestra-init [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  --repo URL   Repository URL (default: \$ORCHESTRA_REPO or hira22/claude-code-orchestra)"
             echo "  --ref REF    Git ref to checkout (tag, branch, commit)"
+            echo "  --clean      Prompt to remove target files no longer present in source (opt-in)"
             echo "  -h, --help   Show this help message"
             exit 0
             ;;
@@ -65,39 +199,6 @@ git clone "${clone_args[@]}" "$REPO_URL" "$TMP_DIR" 2>/dev/null || {
     exit 1
 }
 
-# settings.json merge function
-merge_settings_json() {
-    local existing="$1"
-    local template="$2"
-    local output="$3"
-
-    jq -s '
-        .[0] as $existing |
-        .[1] as $template |
-
-        def merge_hooks($a; $b):
-            ($a // []) + ($b // []) | unique_by((.matcher // "") + (.hooks[0].command // ""));
-
-        (($template // {}) | del(.hooks, .permissions, .env))
-        * (($existing // {}) | del(.hooks, .permissions, .env))
-        + {
-            hooks: (
-                (($existing.hooks // {}) | keys) + (($template.hooks // {}) | keys) | unique
-                | reduce .[] as $key ({}; . + {
-                    ($key): merge_hooks($existing.hooks[$key]; $template.hooks[$key])
-                })
-            ),
-            permissions: {
-                allow: (($existing.permissions.allow // []) + ($template.permissions.allow // [])) | unique,
-                deny: (($existing.permissions.deny // []) + ($template.permissions.deny // [])) | unique,
-                ask: ($existing.permissions.ask // []),
-                defaultMode: ($existing.permissions.defaultMode // "default")
-            },
-            env: (($existing.env // {}) + ($template.env // {}))
-        }
-    ' "$existing" "$template" > "$output"
-}
-
 # Detect mode: initial setup vs update
 if [ -d ".claude" ]; then
     # ─── Update mode ───
@@ -116,6 +217,101 @@ if [ -d ".claude" ]; then
             echo "✓ .claude/$dir/ を更新しました"
         fi
     done
+
+    # --clean: prompt to remove orphans (files in target but not in source)
+    if [ "$CLEAN_MODE" = true ]; then
+        echo ""
+        echo "→ --clean: テンプレートに存在しないファイル/ディレクトリを検出中..."
+        echo "  （注: 手動で追加したファイルもここに含まれます）"
+        dirs_with_orphans=0
+        # Newline-delimited list of hook paths whose scripts were just deleted.
+        # Used after the loop to prune matching entries from .claude/settings.json
+        # so the subsequent jq merge does not retain stale references.
+        # Sentinel "__ALL__" means the entire .claude/hooks/ directory was removed.
+        deleted_hook_paths=""
+        for dir in skills hooks rules agents docs; do
+            [ -d ".claude/$dir" ] || continue
+
+            # Case A: source dir is entirely missing → whole target dir is orphan
+            if [ ! -d "$TMP_DIR/.claude/$dir" ]; then
+                echo ""
+                echo "[$dir/] テンプレート側に存在しません (ディレクトリごと削除候補)"
+                dirs_with_orphans=$((dirs_with_orphans + 1))
+                printf "    .claude/%s/ を削除しますか？ (y/n) " "$dir"
+                read -r response
+                if [ "$response" = "y" ]; then
+                    rm -rf ".claude/$dir"
+                    echo "✓ 削除しました"
+                    if [ "$dir" = "hooks" ]; then
+                        deleted_hook_paths="${deleted_hook_paths}${deleted_hook_paths:+
+}__ALL__"
+                    fi
+                else
+                    echo "→ スキップしました"
+                fi
+                continue
+            fi
+
+            # Case B: per-file orphan detection within shared dir.
+            # Enable pipefail locally so a find failure aborts the orphan list.
+            set -o pipefail
+            orphans=$(
+                cd ".claude/$dir" \
+                && find . -mindepth 1 \
+                    \( -type f -o -type d \) \
+                    -print 2>/dev/null \
+                | while IFS= read -r p; do
+                    rel="${p#./}"
+                    [ -e "$TMP_DIR/.claude/$dir/$rel" ] || echo "$rel"
+                done
+            )
+            set +o pipefail
+
+            if [ -n "$orphans" ]; then
+                echo ""
+                echo "[$dir/] テンプレートに存在しないパス:"
+                echo "$orphans" | sed "s|^|    .claude/$dir/|"
+                dirs_with_orphans=$((dirs_with_orphans + 1))
+                printf "    上記を削除しますか？ (y/n) "
+                read -r response
+                if [ "$response" = "y" ]; then
+                    while IFS= read -r p; do
+                        rm -rf ".claude/$dir/$p"
+                    done <<< "$orphans"
+                    echo "✓ 削除しました"
+                    if [ "$dir" = "hooks" ]; then
+                        deleted_hook_paths="${deleted_hook_paths}${deleted_hook_paths:+
+}$orphans"
+                    fi
+                else
+                    echo "→ スキップしました"
+                fi
+            fi
+        done
+        if [ "$dirs_with_orphans" -eq 0 ]; then
+            echo "→ 削除対象なし"
+        fi
+
+        # Prune .claude/settings.json hook entries that point to scripts we
+        # just deleted, so the subsequent merge_settings_json union doesn't
+        # re-introduce dangling references from the existing config.
+        if [ -n "$deleted_hook_paths" ] \
+           && [ "$JQ_AVAILABLE" = true ] \
+           && [ -f ".claude/settings.json" ]; then
+            if echo "$deleted_hook_paths" | grep -qx "__ALL__"; then
+                paths_json='[".claude/hooks/"]'
+            else
+                paths_json=$(printf '%s\n' "$deleted_hook_paths" \
+                    | jq -R 'select(length > 0) | ".claude/hooks/" + .' \
+                    | jq -s '.')
+            fi
+
+            prune_settings_hooks_for_paths .claude/settings.json "$paths_json" \
+                .claude/settings.json.tmp \
+                && mv .claude/settings.json.tmp .claude/settings.json
+            echo "✓ settings.json から削除済み hook の参照を除去しました"
+        fi
+    fi
 
     # Merge settings.json
     if [ -f ".claude/settings.json" ] && [ -f "$TMP_DIR/.claude/settings.json" ]; then

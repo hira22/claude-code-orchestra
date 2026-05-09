@@ -22,9 +22,16 @@ curl -fsSL https://raw.githubusercontent.com/hira22/claude-code-orchestra/main/i
 
 ```bash
 cd /path/to/your/project
-orchestra-init
+orchestra-init                    # 初回適用 / 更新（既存の手動追加ファイルは保持）
+orchestra-init --clean            # 更新時、テンプレートに無くなったファイルを削除候補として提示
 claude
 ```
+
+`--clean` を指定すると、`.claude/{skills,hooks,rules,agents,docs}/` 配下で
+**テンプレート側に存在しなくなったファイル / ディレクトリ** を一覧表示し、
+ディレクトリ単位で y/n プロンプトで削除確認します。手動で追加した独自
+ファイル（独自 skill 等）も一覧に含まれるため、保持したい場合は `n` で
+スキップしてください。
 
 ## Prerequisites
 
