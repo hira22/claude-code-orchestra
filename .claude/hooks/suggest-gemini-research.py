@@ -89,7 +89,7 @@ def main():
                         "with WebSearch/WebFetch to gather and organize findings efficiently. "
                         "Use Agent tool with subagent_type='general-purpose'. "
                         "Save results to .claude/docs/research/."
-                    )
+                    ),
                 }
             }
             print(json.dumps(output))

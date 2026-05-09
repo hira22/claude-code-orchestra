@@ -1,26 +1,27 @@
 """Log Codex/Gemini CLI input/output to .claude/logs/cli-tools.jsonl.
 
 Extracted from log-cli-tools.py so the same logic is reused by the
-PostToolUse:Bash dispatcher. mkdir is cached at module level to avoid
-redundant filesystem syscalls within a single process.
+PostToolUse:Bash dispatcher.
+
+The log path is resolved per call: $CLAUDE_CLI_LOG_FILE wins, falling back
+to the project-relative default. Tests set the env var to a tmp path so
+they do not pollute the developer's session log.
 """
 
 import json
+import os
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-LOG_DIR = Path(__file__).resolve().parent.parent.parent / "logs"
-LOG_FILE = LOG_DIR / "cli-tools.jsonl"
+DEFAULT_LOG_FILE = (
+    Path(__file__).resolve().parent.parent.parent / "logs" / "cli-tools.jsonl"
+)
 
-_log_dir_ensured = False
 
-
-def _ensure_log_dir() -> None:
-    global _log_dir_ensured
-    if not _log_dir_ensured:
-        LOG_DIR.mkdir(parents=True, exist_ok=True)
-        _log_dir_ensured = True
+def _resolve_log_file() -> Path:
+    override = os.environ.get("CLAUDE_CLI_LOG_FILE")
+    return Path(override) if override else DEFAULT_LOG_FILE
 
 
 def extract_codex_prompt(command: str) -> str | None:
@@ -28,7 +29,7 @@ def extract_codex_prompt(command: str) -> str | None:
     anchor = re.search(r"codex\s+exec\b", command)
     if not anchor:
         return None
-    rest = command[anchor.end():]
+    rest = command[anchor.end() :]
     candidates = re.findall(r'"([^"]+)"', rest)
     candidates += re.findall(r"'([^']+)'", rest)
     if not candidates:
@@ -60,8 +61,9 @@ def truncate_text(text: str, max_length: int = 2000) -> str:
 
 
 def _log_entry(entry: dict) -> None:
-    _ensure_log_dir()
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
+    log_file = _resolve_log_file()
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(log_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
@@ -95,7 +97,7 @@ def check(data: dict) -> dict | None:
     success = exit_code == 0 and bool(output)
 
     entry = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "tool": tool,
         "model": model,
         "prompt": truncate_text(prompt),

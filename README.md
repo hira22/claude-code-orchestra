@@ -146,7 +146,7 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │   ├── hooks/                   # Automation hooks (9 total)
 │   │   ├── agent-router.py      # Agent routing
 │   │   ├── lint-on-save.py      # Auto-lint on save
-│   │   ├── error-to-codex.py    # Error detection → debugger suggestion
+│   │   ├── bash-postdispatch.py # PostToolUse:Bash dispatcher (error/test/log)
 │   │   └── ...
 │   │
 │   ├── rules/                   # Development guidelines
@@ -433,8 +433,7 @@ Automation hooks execute agent coordination and quality checks at the appropriat
 | `lint-on-save.py` | File save | Auto-runs lint |
 | `check-codex-before-write.py` | Before file write | Suggests consulting Codex |
 | `check-codex-after-plan.py` | After Task execution | Suggests Codex review after planning/design tasks |
-| `error-to-codex.py` | Bash error detected | Suggests codex-debugger subagent |
-| `post-test-analysis.py` | Test/build failure | Suggests debug analysis via Codex |
+| `bash-postdispatch.py` | After Bash command | Dispatches to error detection, test analysis, CLI logging |
 | `post-implementation-review.py` | After large implementation | Suggests code review via Codex |
 | `suggest-gemini-research.py` | Before WebSearch/Fetch | Suggests delegating deep research to Opus subagent |
 | `log-cli-tools.py` | Codex/Gemini execution | Records I/O logs |

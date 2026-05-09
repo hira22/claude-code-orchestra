@@ -12,6 +12,7 @@ dev = [
     "ty>=0.0.34",
     "pytest>=8.0",
     "poethepoet>=0.31",
+    "pyyaml>=6.0",
 ]
 
 [build-system]
