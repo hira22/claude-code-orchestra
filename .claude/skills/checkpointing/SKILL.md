@@ -1,6 +1,6 @@
 ---
 name: checkpointing
-description: Save session context (git history, agent activity, skill patterns). Supports --since.
+description: Save session context (git history, agent activity, skill patterns). Triggers at session end, after major milestones, or to capture learnings. Supports --since.
 metadata:
   short-description: Full session checkpoint with skill pattern discovery
 ---

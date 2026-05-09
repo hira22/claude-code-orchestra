@@ -1,6 +1,6 @@
 ---
 name: catchup
-description: Onboarding scan that synthesizes repo artifacts into GUIDE.md for contributors.
+description: Onboarding scan that synthesizes repo artifacts into GUIDE.md for new or returning contributors. Triggers on requests to catch up, resume work, or get up to speed.
 metadata:
   short-description: Produce GUIDE.md summarizing past work for new/returning contributors
 ---

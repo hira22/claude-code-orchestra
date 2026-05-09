@@ -410,7 +410,7 @@ Scans the repository (git history, CLAUDE.md/AGENTS.md, project rules, skill cat
 # Dependencies
 uv add <package>           # Add package
 uv add --dev <package>     # Add dev dependency
-uv sync                    # Sync dependencies
+uv sync --all-extras       # Sync dependencies (required: dev tools live in optional extras)
 
 # Quality checks
 poe lint                   # ruff check + format
