@@ -98,7 +98,7 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint-on-save.py\"",
-            "timeout": 50
+            "timeout": 100
           },
           {
             "type": "command",

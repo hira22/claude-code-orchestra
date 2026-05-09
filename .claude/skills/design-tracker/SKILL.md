@@ -47,28 +47,25 @@ If `$ARGUMENTS` is provided (explicit invocation), focus on recording that speci
 
 ### Update Format
 
-When updating, append to the appropriate section using:
+`.claude/docs/DESIGN.md` stores both **Key Decisions** and **Changelog** as
+tables. Append a new row to the existing table — do **not** create a new
+heading or duplicate the section.
+
+Key Decisions table (append a row under `### Key Decisions`):
 
 ```markdown
-### Key Decisions
-
-#### {Decision Title} ({Date})
-
-**Context**: {Why this decision was needed}
-**Decision**: {What was decided}
-**Rationale**: {Why this option was chosen}
+| {decision} | {rationale} | {alternatives considered} | {YYYY-MM-DD} |
 ```
 
-### Changelog Entry
-
-Always add to the Changelog section:
+Changelog table (append a row under `## Changelog`):
 
 ```markdown
-## Changelog
-
-### {Date}
-- {Brief description of what was recorded}
+| {YYYY-MM-DD} | {brief description of what was recorded} |
 ```
+
+Other sections (Architecture, Implementation Plan, TODO, Open Questions)
+each have their own structure — match the existing format in the file
+rather than introducing a new layout.
 
 ## Output Format
 
