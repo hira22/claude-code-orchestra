@@ -9,13 +9,18 @@ All agents (Claude Code, subagents, Codex, Gemini) can read this log.
 """
 
 import json
+import os
 import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-LOG_DIR = Path(__file__).parent.parent / "logs"
-LOG_FILE = LOG_DIR / "cli-tools.jsonl"
+DEFAULT_LOG_FILE = Path(__file__).parent.parent / "logs" / "cli-tools.jsonl"
+
+
+def _resolve_log_file() -> Path:
+    override = os.environ.get("CLAUDE_CLI_LOG_FILE")
+    return Path(override) if override else DEFAULT_LOG_FILE
 
 
 def extract_codex_prompt(command: str) -> str | None:
@@ -67,8 +72,9 @@ def truncate_text(text: str, max_length: int = 2000) -> str:
 
 def log_entry(entry: dict) -> None:
     """Append entry to JSONL log file."""
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
+    log_file = _resolve_log_file()
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(log_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 

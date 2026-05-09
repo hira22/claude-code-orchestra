@@ -77,19 +77,16 @@ def test_git_status_payload_short_circuits(hook_runner):
     )
 
 
-def test_codex_payload_triggers_only_cli_logger(
-    hook_runner, tmp_path: Path, project_root: Path
-):
+def test_codex_payload_triggers_only_cli_logger(hook_runner, tmp_path: Path):
     """codex exec payload triggers cli_logger; error/test handlers skip codex commands."""
     payload = _bash_payload(
         command='codex exec --sandbox read-only "What is 2+2?"',
         stdout="The answer is 4.",
         exit_code=0,
     )
-    log_file = project_root / ".claude" / "logs" / "cli-tools.jsonl"
-    initial_size = log_file.stat().st_size if log_file.exists() else 0
+    log_file = tmp_path / "cli-tools.jsonl"
 
-    result = hook_runner(HOOK, payload)
+    result = hook_runner(HOOK, payload, env={"CLAUDE_CLI_LOG_FILE": str(log_file)})
     assert result.returncode == 0, f"stderr: {result.stderr}"
     out = _parse(result.stdout)
     assert out is not None
@@ -98,11 +95,8 @@ def test_codex_payload_triggers_only_cli_logger(
     assert "Error Detected" not in ctx
     assert "Codex Debug Suggestion" not in ctx
 
-    # Verify the log file actually grew with a valid JSON line.
-    assert log_file.exists()
-    new_size = log_file.stat().st_size
-    assert new_size > initial_size, "cli_logger should have appended a line"
-    # Last line should parse as JSON with expected keys.
+    # Verify the dispatcher routed to cli_logger and wrote a JSON line.
+    assert log_file.exists(), "cli_logger should have appended a line to the tmp log"
     last_line = log_file.read_text(encoding="utf-8").splitlines()[-1]
     entry = json.loads(last_line)
     assert entry["tool"] == "codex"

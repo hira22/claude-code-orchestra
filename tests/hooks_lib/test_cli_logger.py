@@ -1,6 +1,7 @@
 """Direct unit tests for .claude/hooks/lib/cli_logger.py.
 
-LOG_FILE is monkeypatched to tmp_path so tests stay isolated and fast.
+The log path is redirected to a tmp file via $CLAUDE_CLI_LOG_FILE so tests
+stay isolated and never touch the developer's session log.
 """
 
 from __future__ import annotations
@@ -14,14 +15,12 @@ import pytest
 
 @pytest.fixture
 def cli_logger(lib_module_path, tmp_path, monkeypatch):
+    log_file = tmp_path / "cli-tools.jsonl"
+    monkeypatch.setenv("CLAUDE_CLI_LOG_FILE", str(log_file))
     if "lib.cli_logger" in sys.modules:
         mod = importlib.reload(sys.modules["lib.cli_logger"])
     else:
         mod = importlib.import_module("lib.cli_logger")
-    log_file = tmp_path / "cli-tools.jsonl"
-    monkeypatch.setattr(mod, "LOG_DIR", tmp_path)
-    monkeypatch.setattr(mod, "LOG_FILE", log_file)
-    monkeypatch.setattr(mod, "_log_dir_ensured", False)
     return mod, log_file
 
 

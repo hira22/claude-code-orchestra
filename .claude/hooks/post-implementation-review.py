@@ -27,19 +27,26 @@ def validate_input(file_path: str, content: str) -> bool:
     return True
 
 
-# State file to track changes in this session
-STATE_FILE = "/tmp/claude-code-implementation-state.json"
+# State file to track changes in this session.
+# Path resolved per call: $CLAUDE_IMPLEMENTATION_STATE_FILE wins so tests can
+# point at a tmp file instead of clobbering the live session's state.
+DEFAULT_STATE_FILE = "/tmp/claude-code-implementation-state.json"
 
 # Thresholds for suggesting review
 MIN_FILES_FOR_REVIEW = 3
 MIN_LINES_FOR_REVIEW = 100
 
 
+def _resolve_state_file() -> str:
+    return os.environ.get("CLAUDE_IMPLEMENTATION_STATE_FILE") or DEFAULT_STATE_FILE
+
+
 def load_state() -> dict:
     """Load session state."""
+    state_file = _resolve_state_file()
     try:
-        if os.path.exists(STATE_FILE):
-            with open(STATE_FILE) as f:
+        if os.path.exists(state_file):
+            with open(state_file) as f:
                 return json.load(f)
     except Exception:
         pass
@@ -49,7 +56,7 @@ def load_state() -> dict:
 def save_state(state: dict):
     """Save session state."""
     try:
-        with open(STATE_FILE, "w") as f:
+        with open(_resolve_state_file(), "w") as f:
             json.dump(state, f)
     except Exception:
         pass

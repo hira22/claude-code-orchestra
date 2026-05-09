@@ -1,7 +1,8 @@
 """Unit tests for .claude/hooks/log-cli-tools.py (TaskCompleted hook).
 
-The hook writes to .claude/logs/cli-tools.jsonl (gitignored). Tests assert that
-the last appended line matches the expected JSON structure.
+The hook writes to .claude/logs/cli-tools.jsonl by default; tests redirect
+it to a tmp file via $CLAUDE_CLI_LOG_FILE so they do not pollute the
+developer's session log.
 """
 
 from __future__ import annotations
@@ -15,8 +16,13 @@ HOOK = "log-cli-tools.py"
 
 
 @pytest.fixture
-def log_file(project_root: Path) -> Path:
-    return project_root / ".claude" / "logs" / "cli-tools.jsonl"
+def log_file(tmp_path: Path) -> Path:
+    return tmp_path / "cli-tools.jsonl"
+
+
+@pytest.fixture
+def hook_env(log_file: Path) -> dict[str, str]:
+    return {"CLAUDE_CLI_LOG_FILE": str(log_file)}
 
 
 def _bash(command: str, stdout: str = "", exit_code: int = 0) -> dict:
@@ -40,58 +46,55 @@ def _line_count(log_file: Path) -> int:
     return sum(1 for _ in log_file.read_text(encoding="utf-8").splitlines())
 
 
-def test_non_bash_tool_skipped(hook_runner, log_file: Path):
-    before = _line_count(log_file)
-    result = hook_runner(HOOK, {"tool_name": "Read", "tool_input": {}})
+def test_non_bash_tool_skipped(hook_runner, hook_env, log_file: Path):
+    result = hook_runner(HOOK, {"tool_name": "Read", "tool_input": {}}, env=hook_env)
     assert result.returncode == 0
     assert result.stdout.strip() == ""
-    assert _line_count(log_file) == before, "No log entry expected for non-Bash"
+    assert _line_count(log_file) == 0, "No log entry expected for non-Bash"
 
 
-def test_non_codex_gemini_command_skipped(hook_runner, log_file: Path):
-    before = _line_count(log_file)
-    result = hook_runner(HOOK, _bash("ls -la"))
+def test_non_codex_gemini_command_skipped(hook_runner, hook_env, log_file: Path):
+    result = hook_runner(HOOK, _bash("ls -la"), env=hook_env)
     assert result.returncode == 0
     assert result.stdout.strip() == ""
-    assert _line_count(log_file) == before
+    assert _line_count(log_file) == 0
 
 
-def test_codex_command_logs_entry(hook_runner, log_file: Path):
-    before = _line_count(log_file)
+def test_codex_command_logs_entry(hook_runner, hook_env, log_file: Path):
     payload = _bash(
         command='codex exec --sandbox read-only "Explain prime factorization"',
         stdout="Prime factorization is...",
         exit_code=0,
     )
-    result = hook_runner(HOOK, payload)
+    result = hook_runner(HOOK, payload, env=hook_env)
     assert result.returncode == 0
     assert "[LOG]" in result.stdout
-    assert _line_count(log_file) == before + 1
+    assert _line_count(log_file) == 1
     entry = _last_line(log_file)
     assert entry["tool"] == "codex"
     assert "Explain prime factorization" in entry["prompt"]
     assert entry["success"] is True
 
 
-def test_gemini_command_logs_entry(hook_runner, log_file: Path):
-    before = _line_count(log_file)
+def test_gemini_command_logs_entry(hook_runner, hook_env, log_file: Path):
     payload = _bash(
         command='gemini -p "describe this image @photo.png"',
         stdout="A cat sitting on a chair.",
         exit_code=0,
     )
-    result = hook_runner(HOOK, payload)
+    result = hook_runner(HOOK, payload, env=hook_env)
     assert result.returncode == 0
-    assert _line_count(log_file) == before + 1
+    assert _line_count(log_file) == 1
     entry = _last_line(log_file)
     assert entry["tool"] == "gemini"
     assert "describe this image" in entry["prompt"]
 
 
-def test_codex_without_extractable_prompt_not_logged(hook_runner, log_file: Path):
+def test_codex_without_extractable_prompt_not_logged(
+    hook_runner, hook_env, log_file: Path
+):
     """No quoted prompt → cannot extract → skip logging."""
-    before = _line_count(log_file)
     payload = _bash(command="codex --version", stdout="codex 0.1", exit_code=0)
-    result = hook_runner(HOOK, payload)
+    result = hook_runner(HOOK, payload, env=hook_env)
     assert result.returncode == 0
-    assert _line_count(log_file) == before
+    assert _line_count(log_file) == 0

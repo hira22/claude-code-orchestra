@@ -40,7 +40,13 @@ def test_each_rule_is_non_empty_and_has_heading(rule_files: list[Path]):
 
 
 def _grep_rule_references(root: Path) -> set[str]:
-    """Find every `.claude/rules/<name>.md` reference under the project."""
+    """Find every `.claude/rules/<name>.md` reference under the project.
+
+    Skips gitignored runtime/generated directories (checkpoints, agent-team
+    work logs, log files). Otherwise a stale historical note from a prior
+    session referencing a renamed/removed rule would fail this test even
+    though the tracked tree is consistent.
+    """
     pattern = re.compile(r"\.claude/rules/([\w-]+\.md)")
     found: set[str] = set()
     skip_dirs = {
@@ -50,6 +56,10 @@ def _grep_rule_references(root: Path) -> set[str]:
         "__pycache__",
         ".pytest_cache",
         "tests",
+        # Runtime-generated, gitignored under .claude/
+        "checkpoints",
+        "agent-teams",
+        "logs",
     }
     for path in root.rglob("*"):
         if not path.is_file():
