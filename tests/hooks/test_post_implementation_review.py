@@ -7,11 +7,9 @@ resets that file so runs are deterministic regardless of order or prior sessions
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 import pytest
-
 
 HOOK = "post-implementation-review.py"
 STATE_FILE = Path("/tmp/claude-code-implementation-state.json")

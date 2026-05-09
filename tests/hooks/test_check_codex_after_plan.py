@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 
-
 HOOK = "check-codex-after-plan.py"
 
 

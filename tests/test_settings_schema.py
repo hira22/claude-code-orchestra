@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-
 SETTINGS_REL_PATH = Path(".claude") / "settings.json"
 HOOK_PATH_PATTERN = re.compile(
     r'\$CLAUDE_PROJECT_DIR/\.claude/hooks/(?P<name>[\w./-]+\.py)'

@@ -12,9 +12,6 @@ import os
 import stat
 from pathlib import Path
 
-import pytest
-
-
 HOOK = "lint-on-save.py"
 
 
@@ -51,7 +48,9 @@ def test_python_file_invokes_ruff_then_ty_in_order(hook_runner, tmp_path: Path):
     assert "OK" in result.stdout
 
     calls = [json.loads(line) for line in log_file.read_text().splitlines()]
-    assert len(calls) == 3, f"Expected 3 uv calls (ruff check, ruff format, ty check); got: {calls}"
+    assert len(calls) == 3, (
+        f"Expected 3 uv calls (ruff check, ruff format, ty check); got: {calls}"
+    )
     # Order matters: ruff check --fix → ruff format → ty check
     assert calls[0][:4] == ["run", "ruff", "check", "--fix"]
     assert calls[1][:3] == ["run", "ruff", "format"]
@@ -103,15 +102,11 @@ def test_missing_file_path_skipped(hook_runner, tmp_path: Path):
 def test_ruff_failure_surfaces_to_stderr(hook_runner, tmp_path: Path):
     """If uv exits non-zero with stdout content, the hook reports it on stderr."""
     bin_dir = tmp_path / "stub-bin"
-    log_file = tmp_path / "calls.jsonl"
     # Stub that exits 1 with a fake lint complaint on stdout.
     bin_dir.mkdir(parents=True, exist_ok=True)
     stub = bin_dir / "uv"
     stub.write_text(
-        "#!/usr/bin/env python3\n"
-        "import sys\n"
-        "print('E501 line too long')\n"
-        "sys.exit(1)\n"
+        "#!/usr/bin/env python3\nimport sys\nprint('E501 line too long')\nsys.exit(1)\n"
     )
     stub.chmod(stub.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 

@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-
 EXPECTED_RULES = {
     "codex-delegation.md",
     "coding-principles.md",

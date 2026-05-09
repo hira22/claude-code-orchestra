@@ -29,6 +29,7 @@ source = { virtual = "." }
 dev = [
     { name = "poethepoet" },
     { name = "pytest" },
+    { name = "pyyaml" },
     { name = "ruff" },
     { name = "ty" },
 ]
@@ -37,6 +38,7 @@ dev = [
 requires-dist = [
     { name = "poethepoet", marker = "extra == 'dev'", specifier = ">=0.31" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
     { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.34" },
 ]
