@@ -7,6 +7,78 @@
 #   orchestra-init --ref v1.0               # Pin to specific version
 #   ORCHESTRA_REPO=<url> orchestra-init     # Use custom repository
 
+# settings.json merge function (defined first so the script can be sourced
+# for testing without triggering CLI execution).
+merge_settings_json() {
+    local existing="$1"
+    local template="$2"
+    local output="$3"
+
+    jq -s '
+        .[0] as $existing |
+        .[1] as $template |
+
+        def merge_hooks($a; $b):
+            # Build a list of matchers in first-seen order across both sides
+            # (jq `unique` would alpha-sort and create churn-y diffs, so we
+            # use a manual reduce that preserves insertion order).
+            # Each comma branch needs its own parens — without them jq parses
+            # `expr | f, g` as `expr | (f, g)` and tries to apply g downstream.
+            (
+                [
+                    (($a // [])[] | (.matcher // "")),
+                    (($b // [])[] | (.matcher // ""))
+                ]
+                | reduce .[] as $m ([]; if any(. == $m) then . else . + [$m] end)
+            ) as $matchers
+            | $matchers | map(
+                . as $m
+                # Collect ALL entries with this matcher from each side.
+                # Picking only `first` would silently drop hooks from
+                # additional same-matcher entries (data loss).
+                | [($a // [])[] | select((.matcher // "") == $m)] as $aentries
+                | [($b // [])[] | select((.matcher // "") == $m)] as $bentries
+                | ($aentries | map(.hooks // []) | add // []) as $ahooks
+                | ($bentries | map(.hooks // []) | add // []) as $bhooks
+                # Use template wrapper if present; replace its .hooks with the
+                # template-first union deduped by .command. Template-first
+                # ordering means template wins on timeout / other field
+                # conflicts for the same command.
+                | if ($bentries | length) > 0 then
+                    $bentries[0]
+                    | .hooks = (($bhooks + $ahooks) | unique_by(.command // ""))
+                  else
+                    $aentries[0]
+                    | .hooks = ($ahooks | unique_by(.command // ""))
+                  end
+            );
+
+        (($template // {}) | del(.hooks, .permissions, .env))
+        * (($existing // {}) | del(.hooks, .permissions, .env))
+        + {
+            hooks: (
+                (($existing.hooks // {}) | keys) + (($template.hooks // {}) | keys) | unique
+                | reduce .[] as $key ({}; . + {
+                    ($key): merge_hooks($existing.hooks[$key]; $template.hooks[$key])
+                })
+            ),
+            permissions: {
+                allow: (($existing.permissions.allow // []) + ($template.permissions.allow // [])) | unique,
+                deny: (($existing.permissions.deny // []) + ($template.permissions.deny // [])) | unique,
+                ask: ($existing.permissions.ask // []),
+                defaultMode: ($existing.permissions.defaultMode // "default")
+            },
+            env: (($existing.env // {}) + ($template.env // {}))
+        }
+    ' "$existing" "$template" > "$output"
+}
+
+# Source guard: when sourced (e.g. by tests/test_merge_hooks.sh) only the
+# function definitions above are loaded; the CLI flow below is skipped.
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    return 0
+fi
+
 set -e
 
 REPO_URL="${ORCHESTRA_REPO:-https://github.com/hira22/claude-code-orchestra}"
@@ -69,39 +141,6 @@ clone_args=(--depth 1)
 git clone "${clone_args[@]}" "$REPO_URL" "$TMP_DIR" 2>/dev/null || {
     echo "エラー: リポジトリのクローンに失敗しました: $REPO_URL"
     exit 1
-}
-
-# settings.json merge function
-merge_settings_json() {
-    local existing="$1"
-    local template="$2"
-    local output="$3"
-
-    jq -s '
-        .[0] as $existing |
-        .[1] as $template |
-
-        def merge_hooks($a; $b):
-            ($a // []) + ($b // []) | unique_by((.matcher // "") + (.hooks[0].command // ""));
-
-        (($template // {}) | del(.hooks, .permissions, .env))
-        * (($existing // {}) | del(.hooks, .permissions, .env))
-        + {
-            hooks: (
-                (($existing.hooks // {}) | keys) + (($template.hooks // {}) | keys) | unique
-                | reduce .[] as $key ({}; . + {
-                    ($key): merge_hooks($existing.hooks[$key]; $template.hooks[$key])
-                })
-            ),
-            permissions: {
-                allow: (($existing.permissions.allow // []) + ($template.permissions.allow // [])) | unique,
-                deny: (($existing.permissions.deny // []) + ($template.permissions.deny // [])) | unique,
-                ask: ($existing.permissions.ask // []),
-                defaultMode: ($existing.permissions.defaultMode // "default")
-            },
-            env: (($existing.env // {}) + ($template.env // {}))
-        }
-    ' "$existing" "$template" > "$output"
 }
 
 # Detect mode: initial setup vs update
