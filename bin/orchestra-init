@@ -11,6 +11,7 @@ set -e
 
 REPO_URL="${ORCHESTRA_REPO:-https://github.com/hira22/claude-code-orchestra}"
 TARGET_REF=""
+CLEAN_MODE=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -23,12 +24,17 @@ while [[ $# -gt 0 ]]; do
             TARGET_REF="$2"
             shift 2
             ;;
+        --clean)
+            CLEAN_MODE=true
+            shift
+            ;;
         -h|--help)
             echo "Usage: orchestra-init [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  --repo URL   Repository URL (default: \$ORCHESTRA_REPO or hira22/claude-code-orchestra)"
             echo "  --ref REF    Git ref to checkout (tag, branch, commit)"
+            echo "  --clean      Prompt to remove target files no longer present in source (opt-in)"
             echo "  -h, --help   Show this help message"
             exit 0
             ;;
@@ -116,6 +122,68 @@ if [ -d ".claude" ]; then
             echo "✓ .claude/$dir/ を更新しました"
         fi
     done
+
+    # --clean: prompt to remove orphans (files in target but not in source)
+    if [ "$CLEAN_MODE" = true ]; then
+        echo ""
+        echo "→ --clean: テンプレートに存在しないファイル/ディレクトリを検出中..."
+        echo "  （注: 手動で追加したファイルもここに含まれます）"
+        dirs_with_orphans=0
+        for dir in skills hooks rules agents docs; do
+            [ -d ".claude/$dir" ] || continue
+
+            # Case A: source dir is entirely missing → whole target dir is orphan
+            if [ ! -d "$TMP_DIR/.claude/$dir" ]; then
+                echo ""
+                echo "[$dir/] テンプレート側に存在しません (ディレクトリごと削除候補)"
+                dirs_with_orphans=$((dirs_with_orphans + 1))
+                printf "    .claude/%s/ を削除しますか？ (y/n) " "$dir"
+                read -r response
+                if [ "$response" = "y" ]; then
+                    rm -rf ".claude/$dir"
+                    echo "✓ 削除しました"
+                else
+                    echo "→ スキップしました"
+                fi
+                continue
+            fi
+
+            # Case B: per-file orphan detection within shared dir.
+            # Enable pipefail locally so a find failure aborts the orphan list.
+            set -o pipefail
+            orphans=$(
+                cd ".claude/$dir" \
+                && find . -mindepth 1 \
+                    \( -type f -o -type d \) \
+                    -print 2>/dev/null \
+                | while IFS= read -r p; do
+                    rel="${p#./}"
+                    [ -e "$TMP_DIR/.claude/$dir/$rel" ] || echo "$rel"
+                done
+            )
+            set +o pipefail
+
+            if [ -n "$orphans" ]; then
+                echo ""
+                echo "[$dir/] テンプレートに存在しないパス:"
+                echo "$orphans" | sed "s|^|    .claude/$dir/|"
+                dirs_with_orphans=$((dirs_with_orphans + 1))
+                printf "    上記を削除しますか？ (y/n) "
+                read -r response
+                if [ "$response" = "y" ]; then
+                    while IFS= read -r p; do
+                        rm -rf ".claude/$dir/$p"
+                    done <<< "$orphans"
+                    echo "✓ 削除しました"
+                else
+                    echo "→ スキップしました"
+                fi
+            fi
+        done
+        if [ "$dirs_with_orphans" -eq 0 ]; then
+            echo "→ 削除対象なし"
+        fi
+    fi
 
     # Merge settings.json
     if [ -f ".claude/settings.json" ] && [ -f "$TMP_DIR/.claude/settings.json" ]; then
