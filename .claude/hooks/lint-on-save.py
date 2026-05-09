@@ -74,7 +74,7 @@ def run_ruff_sequence(file_path: str, cwd: str) -> list[str]:
 
 
 def run_ty_check(file_path: str, cwd: str) -> list[str]:
-    """ty is read-only, safe to run in parallel with the ruff sequence."""
+    """ty check; must run AFTER the ruff sequence so it sees the post-fix state."""
     ret, stdout, stderr = _run(["uv", "run", "ty", "check", file_path], cwd)
     if ret == 0:
         return []
