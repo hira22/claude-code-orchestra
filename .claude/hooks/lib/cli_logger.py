@@ -7,7 +7,7 @@ redundant filesystem syscalls within a single process.
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 LOG_DIR = Path(__file__).resolve().parent.parent.parent / "logs"
@@ -95,7 +95,7 @@ def check(data: dict) -> dict | None:
     success = exit_code == 0 and bool(output)
 
     entry = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "tool": tool,
         "model": model,
         "prompt": truncate_text(prompt),
