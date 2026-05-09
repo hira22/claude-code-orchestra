@@ -135,8 +135,7 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │   │   ├── simplify/            # Code refactoring
 │   │   ├── codex-system/        # Codex CLI integration
 │   │   ├── gemini-system/       # Gemini CLI integration
-│   │   ├── design-tracker/      # Automatic design decision tracking
-│   │   ├── update-design/       # Explicit design document updates
+│   │   ├── design-tracker/      # Design decision tracking (auto + explicit)
 │   │   ├── research-lib/        # Library research
 │   │   ├── update-lib-docs/     # Library documentation updates
 │   │   ├── checkpointing/       # Session persistence + pattern discovery
@@ -147,7 +146,7 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │   ├── hooks/                   # Automation hooks (9 total)
 │   │   ├── agent-router.py      # Agent routing
 │   │   ├── lint-on-save.py      # Auto-lint on save
-│   │   ├── error-to-codex.py    # Error detection → debugger suggestion
+│   │   ├── bash-postdispatch.py # PostToolUse:Bash dispatcher (error/test/log)
 │   │   └── ...
 │   │
 │   ├── rules/                   # Development guidelines
@@ -348,11 +347,7 @@ Multimodal file processing (PDF/video/audio/image) powered by Gemini CLI.
 
 #### `/design-tracker` — Design Decision Tracking
 
-Automatically records architecture and implementation decisions. Detects design decisions during conversation and appends them to `.claude/docs/DESIGN.md`.
-
-#### `/update-design` — Update Design Document
-
-Extracts design decisions from conversation content and explicitly updates `.claude/docs/DESIGN.md`.
+Tracks architecture and implementation decisions in `.claude/docs/DESIGN.md`. Activates automatically during design discussions, and also accepts explicit invocation (`/design-tracker [content]`) when you want to force an update — this absorbs the former `/update-design` flow.
 
 #### `/research-lib` — Library Research
 
@@ -415,7 +410,7 @@ Scans the repository (git history, CLAUDE.md/AGENTS.md, project rules, skill cat
 # Dependencies
 uv add <package>           # Add package
 uv add --dev <package>     # Add dev dependency
-uv sync                    # Sync dependencies
+uv sync --all-extras       # Sync dependencies (required: dev tools live in optional extras)
 
 # Quality checks
 poe lint                   # ruff check + format
@@ -438,8 +433,7 @@ Automation hooks execute agent coordination and quality checks at the appropriat
 | `lint-on-save.py` | File save | Auto-runs lint |
 | `check-codex-before-write.py` | Before file write | Suggests consulting Codex |
 | `check-codex-after-plan.py` | After Task execution | Suggests Codex review after planning/design tasks |
-| `error-to-codex.py` | Bash error detected | Suggests codex-debugger subagent |
-| `post-test-analysis.py` | Test/build failure | Suggests debug analysis via Codex |
+| `bash-postdispatch.py` | After Bash command | Dispatches to error detection, test analysis, CLI logging |
 | `post-implementation-review.py` | After large implementation | Suggests code review via Codex |
 | `suggest-gemini-research.py` | Before WebSearch/Fetch | Suggests delegating deep research to Opus subagent |
 | `log-cli-tools.py` | Codex/Gemini execution | Records I/O logs |

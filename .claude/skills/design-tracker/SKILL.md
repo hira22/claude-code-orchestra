@@ -1,6 +1,6 @@
 ---
 name: design-tracker
-description: PROACTIVELY track and document project design decisions without being asked. Activate automatically when detecting architecture discussions, implementation decisions, pattern choices, library selections, or any technical decisions. Also use when user explicitly says "record this", "what's our design status", or equivalent. Do NOT wait for user to ask - record important decisions immediately.
+description: Track design decisions in DESIGN.md. Triggers on architecture talk, "record this", "update design", or explicit /design-tracker.
 ---
 
 # Design Tracker Skill
@@ -17,9 +17,10 @@ This skill manages the project's design documentation (`.claude/docs/DESIGN.md`)
 
 - User discusses architecture or design patterns
 - User makes implementation decisions (e.g., "let's use ReAct pattern")
-- User says "record this", "add to design", "document this"
+- User says "record this", "add to design", "document this", "update design"
 - User asks "what's our current design?" or "what have we decided?"
 - Important technical decisions are made during conversation
+- User explicitly invokes via `/design-tracker [optional content]`
 
 ## Workflow
 
@@ -29,6 +30,8 @@ This skill manages the project's design documentation (`.claude/docs/DESIGN.md`)
 2. Extract the decision/information from conversation
 3. Update the appropriate section
 4. Add entry to Changelog with today's date
+
+If `$ARGUMENTS` is provided (explicit invocation), focus on recording that specific content.
 
 ### Sections to Update
 
@@ -41,6 +44,28 @@ This skill manages the project's design documentation (`.claude/docs/DESIGN.md`)
 | Why we chose X over Y | Implementation Plan > Key Decisions |
 | Things to implement later | TODO |
 | Unresolved questions | Open Questions |
+
+### Update Format
+
+`.claude/docs/DESIGN.md` stores both **Key Decisions** and **Changelog** as
+tables. Append a new row to the existing table — do **not** create a new
+heading or duplicate the section.
+
+Key Decisions table (append a row under `### Key Decisions`):
+
+```markdown
+| {decision} | {rationale} | {alternatives considered} | {YYYY-MM-DD} |
+```
+
+Changelog table (append a row under `## Changelog`):
+
+```markdown
+| {YYYY-MM-DD} | {brief description of what was recorded} |
+```
+
+Other sections (Architecture, Implementation Plan, TODO, Open Questions)
+each have their own structure — match the existing format in the file
+rather than introducing a new layout.
 
 ## Output Format
 
@@ -55,3 +80,9 @@ When recording, confirm in Japanese:
 - **Code examples**: English
 - **Document content**: English (technical terms) + Japanese (descriptions OK)
 - **User communication**: Japanese
+
+## Migration Note
+
+The standalone `update-design` skill has been merged into this one. Both
+auto-trigger (architecture/decision keywords) and explicit invocation
+(`/design-tracker [content]`) flow through this single skill.

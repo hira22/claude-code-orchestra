@@ -85,3 +85,7 @@ _Not initialized yet. Run `/init` to populate this section._
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 <!-- Working state below: appended by /start-feature, /design-tracker, and manual notes. -->
+
+## Migration Notes
+
+- `/update-design` has been merged into `/design-tracker`. Use `/design-tracker [content]` for both auto-tracked and explicitly recorded design decisions.

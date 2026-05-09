@@ -1,9 +1,6 @@
 ---
 name: team-implement
-description: |
-  Parallel implementation using Agent Teams. Spawns teammates per module/layer,
-  each owning separate files to avoid conflicts. Uses shared task list with
-  dependencies for autonomous coordination. Run after /start-feature plan approval.
+description: Parallel implementation with Agent Teams, one teammate per module/layer.
 metadata:
   short-description: Parallel implementation with Agent Teams
 ---

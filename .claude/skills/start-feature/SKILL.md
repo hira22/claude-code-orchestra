@@ -1,11 +1,6 @@
 ---
 name: start-feature
-description: |
-  Start a new feature with multi-agent collaboration (Opus 4.6 + Agent Teams).
-  Phase 1: Codebase understanding (Opus subagent 1M context + Claude user interaction).
-  Phase 2: Parallel research & design (Agent Teams: Researcher + Architect).
-  Phase 3: Plan synthesis & user approval.
-  Implementation is handled separately by /team-implement.
+description: Plan a new feature with codebase analysis and parallel research/design.
 metadata:
   short-description: Feature kickoff with Agent Teams (Plan phase)
 ---

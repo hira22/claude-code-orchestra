@@ -1,12 +1,6 @@
 ---
 name: codex-system
-description: |
-  Codex CLI handles planning, design, and complex code implementation.
-  Use for: architecture design, implementation planning, complex algorithms,
-  debugging (root cause analysis), trade-off evaluation, code review.
-  External research is NOT Codex's job — use general-purpose subagent (Opus) instead.
-  Explicit triggers: "plan", "design", "architecture", "think deeper",
-  "analyze", "debug", "complex", "optimize".
+description: Codex CLI for plan, design, architecture, analyze, debug, optimize, complex code, and code review.
 metadata:
   short-description: Codex CLI — planning, design, and complex implementation
 ---

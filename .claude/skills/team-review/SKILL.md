@@ -1,9 +1,6 @@
 ---
 name: team-review
-description: |
-  Parallel code review using Agent Teams. Spawns specialized reviewers
-  (security, quality, test coverage) to review implementation from
-  different perspectives simultaneously. Run after implementation.
+description: Parallel code review with Agent Teams covering security, quality, test coverage.
 metadata:
   short-description: Parallel review with Agent Teams
 ---
