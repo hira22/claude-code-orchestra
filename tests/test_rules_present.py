@@ -13,6 +13,7 @@ EXPECTED_RULES = {
     "dev-environment.md",
     "gemini-delegation.md",
     "language.md",
+    "model-selection.md",
     "security.md",
     "testing.md",
 }

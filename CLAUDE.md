@@ -25,6 +25,20 @@ The above must always be delegated.
 - **Error root cause analysis** → `codex-debugger`
 - **Minor fixes (single file, small changes)** → Claude handles directly
 
+### Model Tier Selection
+
+Tier is chosen by **cognitive complexity**, independent of the delegation trigger:
+
+| Tier | When | Examples |
+|------|------|----------|
+| **Opus** (default) | Design, ambiguity, deep analysis | Architecture decisions, trade-off analysis, complex refactoring |
+| **Sonnet** (override) | Mechanical, well-specified | Rename, format, boilerplate, grep-and-summarize |
+
+- `gemini-explore` and `codex-debugger` default to Sonnet (CLI wrapper tasks)
+- `general-purpose` defaults to Opus; pass `model: "sonnet"` per-call for mechanical tasks
+- Aliases (`opus`/`sonnet`) auto-resolve to the latest version
+- See `.claude/rules/model-selection.md` for detailed criteria
+
 ## 4) Delegation Trigger
 
 Delegate when any of the following apply:
