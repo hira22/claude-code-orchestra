@@ -11,7 +11,7 @@ EXPECTED_RULES = {
     "codex-delegation.md",
     "coding-principles.md",
     "dev-environment.md",
-    "gemini-delegation.md",
+    "multimodal-delegation.md",
     "language.md",
     "model-selection.md",
     "security.md",

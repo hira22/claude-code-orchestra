@@ -41,14 +41,14 @@ def test_codex_command_extraction_picks_longest_quoted_segment(cli_logger):
     assert prompt == "This is the actual prompt that is much longer"
 
 
-def test_gemini_command_extraction(cli_logger):
+def test_agy_command_extraction(cli_logger):
     mod, _ = cli_logger
-    assert mod.extract_gemini_prompt('gemini -p "summarize this"') == "summarize this"
+    assert mod.extract_agy_prompt('agy -p "summarize this"') == "summarize this"
     assert (
-        mod.extract_gemini_prompt("gemini -p 'transcribe @audio.mp3'")
+        mod.extract_agy_prompt("agy -p 'transcribe @audio.mp3'")
         == "transcribe @audio.mp3"
     )
-    assert mod.extract_gemini_prompt("gemini --version") is None
+    assert mod.extract_agy_prompt("agy --version") is None
 
 
 def test_extract_model_flag(cli_logger):
@@ -87,14 +87,30 @@ def test_check_writes_codex_entry(cli_logger):
     assert entry["exit_code"] == 0
 
 
-def test_check_writes_gemini_entry(cli_logger):
+def test_check_writes_agy_entry(cli_logger):
     mod, log_file = cli_logger
-    payload = _bash('gemini -p "describe @img.png"', stdout="A cat", exit_code=0)
+    payload = _bash('agy -p "describe @img.png"', stdout="A cat", exit_code=0)
     result = mod.check(payload)
     assert result is not None
     entry = json.loads(log_file.read_text(encoding="utf-8").splitlines()[0])
-    assert entry["tool"] == "gemini"
+    assert entry["tool"] == "agy"
     assert entry["prompt"] == "describe @img.png"
+    # Model label defaults to the tool name; --model overrides record the flag.
+    assert entry["model"] == "agy"
+
+
+def test_check_writes_agy_entry_with_model_flag(cli_logger):
+    mod, log_file = cli_logger
+    payload = _bash(
+        "agy --model gemini-3.1-pro -p 'read @doc.pdf'",
+        stdout="Doc content",
+        exit_code=0,
+    )
+    result = mod.check(payload)
+    assert result is not None
+    entry = json.loads(log_file.read_text(encoding="utf-8").splitlines()[0])
+    assert entry["tool"] == "agy"
+    assert entry["model"] == "gemini-3.1-pro"
 
 
 def test_check_appends_multiple_entries(cli_logger):
@@ -108,7 +124,7 @@ def test_check_appends_multiple_entries(cli_logger):
     assert prompts == ["first", "second", "third"]
 
 
-def test_non_codex_gemini_command_skipped(cli_logger):
+def test_non_codex_agy_command_skipped(cli_logger):
     mod, log_file = cli_logger
     assert mod.check(_bash("ls -la", stdout="a\nb")) is None
     assert not log_file.exists() or log_file.read_text() == ""

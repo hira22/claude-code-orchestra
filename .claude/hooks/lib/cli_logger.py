@@ -1,4 +1,4 @@
-"""Log Codex/Gemini CLI input/output to .claude/logs/cli-tools.jsonl.
+"""Log Codex/agy CLI input/output to .claude/logs/cli-tools.jsonl.
 
 Extracted from log-cli-tools.py so the same logic is reused by the
 PostToolUse:Bash dispatcher.
@@ -37,13 +37,23 @@ def extract_codex_prompt(command: str) -> str | None:
     return max(candidates, key=len).strip()
 
 
-def extract_gemini_prompt(command: str) -> str | None:
+def extract_agy_prompt(command: str) -> str | None:
+    """Extract prompt from an `agy` command.
+
+    Accepts `agy -p "..."` and `agy -p '...'`, plus intermediate flags
+    such as `agy --model gemini-3.1-pro -p "..."`. Anchors on the `agy `
+    token so unrelated `-p` flags in other commands do not match.
+    """
+    anchor = re.search(r"\bagy\b", command)
+    if not anchor:
+        return None
+    rest = command[anchor.end() :]
     patterns = [
-        r'gemini\s+-p\s+"([^"]+)"',
-        r"gemini\s+-p\s+'([^']+)'",
+        r'-p\s+"([^"]+)"',
+        r"-p\s+'([^']+)'",
     ]
     for pattern in patterns:
-        match = re.search(pattern, command, re.DOTALL)
+        match = re.search(pattern, rest, re.DOTALL)
         if match:
             return match.group(1).strip()
     return None
@@ -68,7 +78,7 @@ def _log_entry(entry: dict) -> None:
 
 
 def check(data: dict) -> dict | None:
-    """Log a Codex/Gemini call if the command matches; return notification dict or None."""
+    """Log a Codex/agy call if the command matches; return notification dict or None."""
     tool_input = data.get("tool_input", {})
     tool_response = data.get("tool_response", {})
 
@@ -76,9 +86,9 @@ def check(data: dict) -> dict | None:
     output = tool_response.get("stdout", "") or tool_response.get("content", "")
 
     is_codex = "codex" in command.lower()
-    is_gemini = "gemini" in command.lower() and "codex" not in command.lower()
+    is_agy = "agy" in command.lower() and "codex" not in command.lower()
 
-    if not (is_codex or is_gemini):
+    if not (is_codex or is_agy):
         return None
 
     if is_codex:
@@ -86,9 +96,11 @@ def check(data: dict) -> dict | None:
         prompt = extract_codex_prompt(command)
         model = extract_model(command) or "default"
     else:
-        tool = "gemini"
-        prompt = extract_gemini_prompt(command)
-        model = "gemini-3.1-pro-preview"
+        tool = "agy"
+        prompt = extract_agy_prompt(command)
+        # agy supports multiple models via `--model`; record the flag value
+        # when present and fall back to the tool name for the default case.
+        model = extract_model(command) or "agy"
 
     if not prompt:
         return None

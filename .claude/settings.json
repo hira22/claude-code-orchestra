@@ -177,7 +177,7 @@
       "Bash(source:*)",
       "Bash(docker:*)",
       "Bash(docker-compose:*)",
-      "Bash(gemini:*)",
+      "Bash(agy:*)",
       "Bash(codex:*)",
       "Bash(pkill:*)",
       "Bash(for:*)",

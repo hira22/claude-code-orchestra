@@ -46,7 +46,7 @@ metadata:
 - git commit, test execution, lint
 - **Codebase analysis** → general-purpose subagent (Opus 1M context)
 - **External information retrieval** → general-purpose subagent (Opus, WebSearch/WebFetch)
-- **Multimodal processing** → Gemini CLI (PDF/video/audio/images)
+- **Multimodal processing** → Antigravity CLI (`agy`) (PDF/video/audio/images)
 
 ## How to Consult
 

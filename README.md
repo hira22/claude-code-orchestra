@@ -7,7 +7,7 @@ Multi-Agent AI Development Environment
 ```
 Claude Code (Orchestrator) ─┬─ Codex CLI (Planning & Complex Code)
                              ├─ Opus Subagents (Research, Analysis, Implementation)
-                             └─ Gemini CLI (Multimodal: PDF/Video/Audio/Image)
+                             └─ Antigravity CLI (agy) (Multimodal: PDF/Video/Audio/Image)
 ```
 
 ## Quick Start
@@ -67,12 +67,15 @@ A plugin that lets you use Codex directly from Claude Code. Simplifies code revi
 - `/codex:rescue` — Task delegation
 - `/codex:status` / `/codex:result` / `/codex:cancel` — Job management
 
-### Gemini CLI
+### Antigravity CLI (`agy`)
 
 ```bash
-npm install -g @google/gemini-cli
-gemini login
+curl -fsSL https://antigravity.google/cli/install.sh | bash
+agy          # first run opens browser Google Sign-In (CI: set ANTIGRAVITY_API_KEY)
 ```
+
+If migrating from a previous gemini-cli install, run `agy plugin import gemini`
+to pull existing settings/plugins into `~/.gemini/antigravity-cli/`.
 
 ## Architecture
 
@@ -83,17 +86,17 @@ gemini login
 │           → Handles user interaction, coordination, concise edits │
 │                      ↓                                      │
 │  ┌──────────────────────┐  ┌──────────────────────────┐    │
-│  │  Subagent (Opus)      │  │  gemini-explore (Opus)    │    │
-│  │  general-purpose      │  │  → Gemini CLI             │    │
+│  │  Subagent (Opus)      │  │  multimodal-explore       │    │
+│  │  general-purpose      │  │  → Antigravity CLI (agy)  │    │
 │  │  → Code implementation│  │  → Multimodal processing  │    │
 │  │  → Research & analysis│  │  → PDF/Video/Audio/Image  │    │
 │  │  → Codex delegation   │  │                            │    │
 │  │  ┌──────────────┐    │  │                            │    │
 │  │  │  Codex CLI   │    │  │  ┌──────────────┐          │    │
-│  │  │  Design &    │    │  │  │  Gemini CLI  │          │    │
-│  │  │  Reasoning   │    │  │  │  1M context  │          │    │
-│  │  │  Debugging   │    │  │  └──────────────┘          │    │
-│  │  └──────────────┘    │  │                            │    │
+│  │  │  Design &    │    │  │  │  agy         │          │    │
+│  │  │  Reasoning   │    │  │  │  (Gemini/    │          │    │
+│  │  │  Debugging   │    │  │  │   Claude/…)  │          │    │
+│  │  └──────────────┘    │  │  └──────────────┘          │    │
 │  └──────────────────────┘  └──────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -106,7 +109,7 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 |-----------|-------------------|
 | Full codebase analysis | **Opus subagent** (1M context) |
 | External research & surveys | **Opus subagent** (WebSearch/WebFetch) |
-| Multimodal files | **Via Gemini** (PDF/Video/Audio/Image) |
+| Multimodal files | **Via Antigravity CLI (`agy`)** (PDF/Video/Audio/Image) |
 | Code implementation | Via subagent (Opus) |
 | Design & planning consultation | Subagent → Codex |
 | Short questions & answers | Direct call OK |
@@ -129,7 +132,7 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │   ├── agents/
 │   │   ├── general-purpose.md   # Implementation, research & Codex delegation agent (Opus)
 │   │   ├── codex-debugger.md    # Error analysis agent (Opus)
-│   │   └── gemini-explore.md    # Multimodal processing agent (Opus)
+│   │   └── multimodal-explore.md # Multimodal processing agent (Sonnet)
 │   │
 │   ├── skills/                  # Reusable workflows (17 total)
 │   │   ├── start-feature/       # Start feature with multi-agent coordination
@@ -141,7 +144,7 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │   │   ├── tdd/                 # Test-driven development
 │   │   ├── simplify/            # Code refactoring
 │   │   ├── codex-system/        # Codex CLI integration
-│   │   ├── gemini-system/       # Gemini CLI integration
+│   │   ├── multimodal-system/   # Antigravity CLI (agy) integration
 │   │   ├── design-tracker/      # Design decision tracking (auto + explicit)
 │   │   ├── research-lib/        # Library research
 │   │   ├── update-lib-docs/     # Library documentation updates
@@ -171,7 +174,7 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │   │   └── libraries/           # Library constraints
 │   │
 │   └── logs/                    # Runtime generated (.gitignore target)
-│       └── cli-tools.jsonl      # Codex/Gemini I/O logs
+│       └── cli-tools.jsonl      # Codex/agy I/O logs
 │
 ├── tests/                       # Test suite (pytest)
 │   ├── conftest.py
@@ -189,7 +192,9 @@ To conserve the main orchestrator's (Opus 4.6, 1M context) context, large-scale 
 │       ├── context-loader/      # Context loading skill
 │       └── design-tracker/      # Design tracking skill
 │
-└── .gemini/                     # Gemini CLI configuration
+└── .gemini/                     # Antigravity CLI (agy) configuration
+                                 # (directory name preserved; agy reads
+                                 #  it via ~/.gemini/antigravity-cli/)
     ├── GEMINI.md
     ├── settings.json
     └── skills/
@@ -352,9 +357,9 @@ Used for design decisions, debugging, and trade-off analysis.
 - "Why isn't this working?" "I'm getting an error"
 - "Which is better?" "Compare these options"
 
-#### `/gemini-system` — Gemini CLI Integration
+#### `/multimodal-system` — Antigravity CLI (`agy`) Integration
 
-Multimodal file processing (PDF/video/audio/image) powered by Gemini CLI.
+Multimodal file processing (PDF/video/audio/image) powered by Antigravity CLI (`agy`).
 
 **Trigger examples:**
 - "Read this PDF" "Summarize this video"
@@ -446,14 +451,14 @@ Automation hooks execute agent coordination and quality checks at the appropriat
 
 | Hook | Trigger | Action |
 |--------|----------|------|
-| `agent-router.py` | User input | Suggests routing to Codex/Gemini |
+| `agent-router.py` | User input | Suggests routing to Codex/agy |
 | `lint-on-save.py` | File save | Auto-runs lint |
 | `check-codex-before-write.py` | Before file write | Suggests consulting Codex |
 | `check-codex-after-plan.py` | After Task execution | Suggests Codex review after planning/design tasks |
 | `bash-postdispatch.py` | After Bash command | Dispatches to error detection, test analysis, CLI logging |
 | `post-implementation-review.py` | After large implementation | Suggests code review via Codex |
 | `suggest-gemini-research.py` | Before WebSearch/Fetch | Suggests delegating deep research to Opus subagent |
-| `log-cli-tools.py` | Codex/Gemini execution | Records I/O logs |
+| `log-cli-tools.py` | Codex/agy execution | Records I/O logs |
 
 ## Language Rules
 

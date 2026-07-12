@@ -53,7 +53,7 @@ def test_non_bash_tool_skipped(hook_runner, hook_env, log_file: Path):
     assert _line_count(log_file) == 0, "No log entry expected for non-Bash"
 
 
-def test_non_codex_gemini_command_skipped(hook_runner, hook_env, log_file: Path):
+def test_non_codex_agy_command_skipped(hook_runner, hook_env, log_file: Path):
     result = hook_runner(HOOK, _bash("ls -la"), env=hook_env)
     assert result.returncode == 0
     assert result.stdout.strip() == ""
@@ -76,9 +76,9 @@ def test_codex_command_logs_entry(hook_runner, hook_env, log_file: Path):
     assert entry["success"] is True
 
 
-def test_gemini_command_logs_entry(hook_runner, hook_env, log_file: Path):
+def test_agy_command_logs_entry(hook_runner, hook_env, log_file: Path):
     payload = _bash(
-        command='gemini -p "describe this image @photo.png"',
+        command='agy -p "describe this image @photo.png"',
         stdout="A cat sitting on a chair.",
         exit_code=0,
     )
@@ -86,8 +86,25 @@ def test_gemini_command_logs_entry(hook_runner, hook_env, log_file: Path):
     assert result.returncode == 0
     assert _line_count(log_file) == 1
     entry = _last_line(log_file)
-    assert entry["tool"] == "gemini"
+    assert entry["tool"] == "agy"
     assert "describe this image" in entry["prompt"]
+    # Model label defaults to the tool name; --model overrides record the flag.
+    assert entry["model"] == "agy"
+
+
+def test_agy_command_with_model_flag_records_model(
+    hook_runner, hook_env, log_file: Path
+):
+    payload = _bash(
+        command="agy --model gemini-3.1-pro -p 'analyze @doc.pdf'",
+        stdout="Doc analysis...",
+        exit_code=0,
+    )
+    result = hook_runner(HOOK, payload, env=hook_env)
+    assert result.returncode == 0
+    entry = _last_line(log_file)
+    assert entry["tool"] == "agy"
+    assert entry["model"] == "gemini-3.1-pro"
 
 
 def test_codex_without_extractable_prompt_not_logged(

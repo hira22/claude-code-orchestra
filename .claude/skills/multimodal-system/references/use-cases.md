@@ -1,13 +1,13 @@
-# Gemini CLI Use Cases — Multimodal Processing
+# Multimodal Use Cases — agy (Antigravity CLI)
 
 > For research, codebase analysis, and documentation lookup, use a general-purpose subagent (Opus) instead.
-> Gemini CLI is specialized for multimodal file processing only.
+> agy is specialized for multimodal file processing only.
 
 ## Video Analysis
 
 ```bash
 # Tutorial video analysis
-gemini -p "Analyze this tutorial video:
+agy -p "Analyze this tutorial video:
 - Summarize the main concepts taught
 - List step-by-step instructions
 - Note any important warnings or tips
@@ -15,14 +15,14 @@ gemini -p "Analyze this tutorial video:
 @tutorial.mp4"
 
 # Code review video
-gemini -p "Extract code patterns and best practices demonstrated in this video @code-review.mp4"
+agy -p "Extract code patterns and best practices demonstrated in this video @code-review.mp4"
 ```
 
 ## Audio Analysis
 
 ```bash
 # Meeting recording
-gemini -p "Transcribe and summarize this technical discussion:
+agy -p "Transcribe and summarize this technical discussion:
 - Key decisions made
 - Action items
 - Open questions
@@ -30,14 +30,14 @@ gemini -p "Transcribe and summarize this technical discussion:
 @meeting.mp3"
 
 # Podcast/talk analysis
-gemini -p "Extract technical insights from this talk about {topic} @conference-talk.mp3"
+agy -p "Extract technical insights from this talk about {topic} @conference-talk.mp3"
 ```
 
 ## PDF Analysis
 
 ```bash
 # API documentation
-gemini -p "Extract from this API documentation:
+agy -p "Extract from this API documentation:
 - All available endpoints
 - Request/response schemas
 - Authentication requirements
@@ -45,7 +45,7 @@ gemini -p "Extract from this API documentation:
 @api-spec.pdf"
 
 # Technical specification
-gemini -p "Summarize this technical specification:
+agy -p "Summarize this technical specification:
 - Core requirements
 - Constraints
 - Interface definitions
@@ -53,7 +53,7 @@ gemini -p "Summarize this technical specification:
 @spec.pdf"
 
 # Research paper
-gemini -p "Analyze this paper and explain:
+agy -p "Analyze this paper and explain:
 - Problem being solved
 - Proposed approach
 - Key algorithms
@@ -65,21 +65,21 @@ gemini -p "Analyze this paper and explain:
 
 ```bash
 # Architecture diagram
-gemini -p "Analyze this architecture diagram:
+agy -p "Analyze this architecture diagram:
 - Components and their responsibilities
 - Data flow between components
 - External dependencies
 @architecture.png"
 
 # Chart analysis
-gemini -p "Extract data and trends from this chart:
+agy -p "Extract data and trends from this chart:
 - Key metrics
 - Trends over time
 - Notable anomalies
 @dashboard.png"
 ```
 
-## When NOT to Use Gemini
+## When NOT to Use agy
 
 | Task | Reason | Use Instead |
 |------|--------|-------------|
@@ -96,13 +96,11 @@ gemini -p "Extract data and trends from this chart:
 ### Piping to Files
 
 ```bash
-gemini -p "Extract all API schemas @api-spec.pdf" > docs/api-schemas.md
+agy -p "Extract all API schemas @api-spec.pdf" > docs/api-schemas.md
 ```
 
 ## Rate Limits
 
-Free tier (personal Google account):
-- 60 requests/minute
-- 1,000 requests/day
-
-Plan accordingly for large extraction tasks.
+`agy` has weekly usage quotas that may be tighter than the gemini-cli free tier.
+Plan accordingly for large extraction tasks; batch multi-file work and prefer
+concise, focused prompts.

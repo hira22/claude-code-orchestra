@@ -1,13 +1,13 @@
 ---
 name: context-loader
-description: Load project context from .claude/ directory at the start of every task. This ensures Gemini CLI has the same coding rules, design decisions, and library constraints as Claude Code.
+description: Load project context from .claude/ directory at the start of every task. This ensures the multimodal CLI (`agy`) has the same coding rules, design decisions, and library constraints as Claude Code.
 ---
 
-# Context Loader Skill for Gemini
+# Context Loader Skill for the Multimodal CLI
 
 ## Purpose
 
-Load shared project context from `.claude/` directory to ensure Gemini CLI operates with the same knowledge as Claude Code and Codex CLI.
+Load shared project context from `.claude/` directory to ensure the multimodal CLI (`agy`) operates with the same knowledge as Claude Code and Codex CLI.
 
 ## When to Activate
 

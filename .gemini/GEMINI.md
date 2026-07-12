@@ -1,7 +1,13 @@
-# GEMINI.md — Gemini Research & Analysis Contract
+# GEMINI.md — Multimodal Research & Analysis Contract
 
-Gemini specializes in **multimodal analysis (PDF/video/audio/images)** in this template.
-It operates as a "multimodal content extraction engine" supporting Claude/Codex decision-making.
+The Antigravity CLI (`agy`) specializes in **multimodal analysis (PDF/video/audio/images)**
+in this template. It operates as a "multimodal content extraction engine"
+supporting Claude/Codex decision-making.
+
+> This file is named `GEMINI.md` for backward compatibility with tooling that
+> reads the `.gemini/` context directory (including `agy`, which is configured
+> via `.gemini/settings.json > context.fileName`). The contract itself is
+> CLI-agnostic and applies to whatever multimodal CLI is currently wired in.
 
 ## 1) Primary Responsibilities
 
@@ -38,7 +44,7 @@ It operates as a "multimodal content extraction engine" supporting Claude/Codex 
 
 ## 4) Scope Boundaries
 
-Gemini does NOT directly perform:
+The multimodal CLI does NOT directly perform:
 
 - Final decisions on implementation plans (handled by Codex/Claude)
 - Final write decisions to the repository (handled by Claude)
@@ -48,6 +54,8 @@ Gemini does NOT directly perform:
 - Separate "observed facts" from "interpretation" in extraction results
 - Explicitly note potential OCR/speech recognition errors
 - Recommend re-verification of important numerical values
+- Constrain output with "Answer concisely in plain text" so `agy`'s
+  agent-mode does not append unrequested "Recommended Changes / Open Questions"
 
 ## 6) Output Size Control
 
