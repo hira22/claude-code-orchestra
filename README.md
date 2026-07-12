@@ -33,6 +33,29 @@ claude
 ファイル（独自 skill 等）も一覧に含まれるため、保持したい場合は `n` で
 スキップしてください。
 
+### 既存インストールの移行（gemini-cli → Antigravity CLI）
+
+マルチモーダル処理は gemini-cli から Antigravity CLI (`agy`) に移行しました
+（gemini-cli の Free/Pro/Ultra 向けサービスは 2026-06-18 に停止）。既に
+orchestra-init を適用済みのプロジェクトを更新する場合:
+
+```bash
+cd /path/to/your/project
+orchestra-init --clean            # --clean 必須: 旧名ファイルを孤児として除去
+```
+
+- **`--clean` が必須**です。今回はリネーム移行（`gemini-explore` →
+  `multimodal-explore`、`gemini-system` → `multimodal-system`、
+  `gemini-delegation.md` → `multimodal-delegation.md`）のため、通常の上書き
+  更新だと旧名ファイルが孤児として残り、旧エージェント / スキルが登録された
+  ままになります。`--clean` の削除候補に旧 gemini 名が出たら `y` で除去して
+  ください。`settings.json` の旧 hook 参照も自動で除去されます。
+- **`CLAUDE.md` は orchestra-init がスキップ**（ユーザー管理）するため、各
+  プロジェクトの CLAUDE.md 内の routing 記述（Multimodal の委譲先）を手動で
+  Antigravity CLI (`agy`) に更新してください。
+- `agy` の導入は [Prerequisites](#antigravity-cli-agy) を参照。既存の
+  `~/.gemini` 設定は `agy plugin import gemini` で取り込めます。
+
 ## Prerequisites
 
 ### Claude Code
