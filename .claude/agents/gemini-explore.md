@@ -2,7 +2,7 @@
 name: gemini-explore
 description: "Multimodal file processing agent powered by Gemini CLI. Use ONLY for: PDF, video, audio, and image content extraction. For research and codebase analysis, use general-purpose subagent instead."
 tools: Read, Bash, Grep, Glob, WebFetch, WebSearch
-model: opus
+model: sonnet
 ---
 
 You are a multimodal file processing agent that uses Gemini CLI to extract content from non-text files.

@@ -330,6 +330,136 @@ else
 fi
 rm -f "$T9_INPUT" "$T9_ACTUAL"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# T10: merge_settings_json prunes deprecated env keys from the existing side.
+# PR#6 removed CLAUDE_CODE_SUBAGENT_MODEL. Existing installs must lose that
+# key on update while unrelated user-added env vars are preserved.
+# ─────────────────────────────────────────────────────────────────────────────
+T10_EXISTING="$(mktemp)"
+T10_TEMPLATE="$(mktemp)"
+T10_ACTUAL="$(mktemp)"
+cat > "$T10_EXISTING" <<'JSON'
+{
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "claude-opus-4-6",
+    "EDITOR": "vim",
+    "USER_CUSTOM_VAR": "keep-me"
+  }
+}
+JSON
+cat > "$T10_TEMPLATE" <<'JSON'
+{
+  "env": {
+    "EDITOR": "code --wait",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
+JSON
+merge_settings_json "$T10_EXISTING" "$T10_TEMPLATE" "$T10_ACTUAL" '["CLAUDE_CODE_SUBAGENT_MODEL"]'
+T10_ACTUAL_ENV=$(jq -S '.env' "$T10_ACTUAL")
+# Expected:
+#  - CLAUDE_CODE_SUBAGENT_MODEL removed (deprecated tombstone)
+#  - USER_CUSTOM_VAR preserved (user-added, not deprecated)
+#  - EDITOR overridden by template value ("template wins on conflict")
+#  - CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS carried in from template
+T10_EXPECTED_ENV=$(cat <<'JSON' | jq -S '.'
+{
+  "EDITOR": "code --wait",
+  "USER_CUSTOM_VAR": "keep-me",
+  "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+}
+JSON
+)
+if [ "$T10_ACTUAL_ENV" = "$T10_EXPECTED_ENV" ]; then
+    PASS=$((PASS + 1))
+    echo "✓ T10 deprecated env key pruned, user-added key preserved"
+else
+    FAIL=$((FAIL + 1))
+    FAILED_NAMES+=("T10 deprecated env prune")
+    echo "✗ T10 deprecated env key pruned, user-added key preserved"
+    echo "  --- expected ---"
+    printf '%s\n' "$T10_EXPECTED_ENV" | sed 's/^/  /'
+    echo "  --- actual ---"
+    printf '%s\n' "$T10_ACTUAL_ENV" | sed 's/^/  /'
+fi
+rm -f "$T10_EXISTING" "$T10_TEMPLATE" "$T10_ACTUAL"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# T11: default (no deprecated list passed) preserves legacy union behavior.
+# Callers that omit the 4th arg — e.g. earlier tests in this file — must not
+# be affected by the new pruning path.
+# ─────────────────────────────────────────────────────────────────────────────
+T11_EXISTING="$(mktemp)"
+T11_TEMPLATE="$(mktemp)"
+T11_ACTUAL="$(mktemp)"
+cat > "$T11_EXISTING" <<'JSON'
+{ "env": { "OLD_KEY": "still-here", "SHARED": "existing" } }
+JSON
+cat > "$T11_TEMPLATE" <<'JSON'
+{ "env": { "SHARED": "template", "NEW_KEY": "added" } }
+JSON
+merge_settings_json "$T11_EXISTING" "$T11_TEMPLATE" "$T11_ACTUAL"
+T11_ACTUAL_ENV=$(jq -S '.env' "$T11_ACTUAL")
+T11_EXPECTED_ENV=$(cat <<'JSON' | jq -S '.'
+{ "OLD_KEY": "still-here", "SHARED": "template", "NEW_KEY": "added" }
+JSON
+)
+if [ "$T11_ACTUAL_ENV" = "$T11_EXPECTED_ENV" ]; then
+    PASS=$((PASS + 1))
+    echo "✓ T11 default deprecated list is empty (union preserved)"
+else
+    FAIL=$((FAIL + 1))
+    FAILED_NAMES+=("T11 default deprecated list empty")
+    echo "✗ T11 default deprecated list is empty (union preserved)"
+    echo "  --- expected ---"
+    printf '%s\n' "$T11_EXPECTED_ENV" | sed 's/^/  /'
+    echo "  --- actual ---"
+    printf '%s\n' "$T11_ACTUAL_ENV" | sed 's/^/  /'
+fi
+rm -f "$T11_EXISTING" "$T11_TEMPLATE" "$T11_ACTUAL"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# T12: CLI-configured DEPRECATED_ENV_KEYS_JSON currently lists
+# CLAUDE_CODE_SUBAGENT_MODEL. This anchors the "PR#6 fix" contract: any
+# future edit that drops the key from the list will fail here and force
+# reviewers to re-justify.
+# ─────────────────────────────────────────────────────────────────────────────
+if echo "$DEPRECATED_ENV_KEYS_JSON" | jq -e 'index("CLAUDE_CODE_SUBAGENT_MODEL") != null' >/dev/null; then
+    PASS=$((PASS + 1))
+    echo "✓ T12 DEPRECATED_ENV_KEYS_JSON contains CLAUDE_CODE_SUBAGENT_MODEL"
+else
+    FAIL=$((FAIL + 1))
+    FAILED_NAMES+=("T12 DEPRECATED_ENV_KEYS_JSON contract")
+    echo "✗ T12 DEPRECATED_ENV_KEYS_JSON contains CLAUDE_CODE_SUBAGENT_MODEL"
+    echo "  --- actual DEPRECATED_ENV_KEYS_JSON ---"
+    printf '  %s\n' "$DEPRECATED_ENV_KEYS_JSON"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# T13: fresh-install parity — the shipped template `.claude/settings.json`
+# must not itself contain the deprecated env key (otherwise a `cp -r` on a
+# clean machine would immediately re-introduce it). Method (b) means the
+# template only needs to be free of the retired key; there are no meta keys
+# to strip. Guarding this in a test keeps future template edits honest.
+# ─────────────────────────────────────────────────────────────────────────────
+TEMPLATE_SETTINGS="$SCRIPT_DIR/../.claude/settings.json"
+if [ -f "$TEMPLATE_SETTINGS" ]; then
+    if jq -e '.env.CLAUDE_CODE_SUBAGENT_MODEL' "$TEMPLATE_SETTINGS" >/dev/null 2>&1; then
+        FAIL=$((FAIL + 1))
+        FAILED_NAMES+=("T13 template contains deprecated env key")
+        echo "✗ T13 template settings.json must not contain CLAUDE_CODE_SUBAGENT_MODEL"
+    else
+        PASS=$((PASS + 1))
+        echo "✓ T13 template settings.json is free of deprecated env key"
+    fi
+else
+    # Template file is a repo-level asset; missing it means the checkout is
+    # broken. Fail loudly rather than silently skip.
+    FAIL=$((FAIL + 1))
+    FAILED_NAMES+=("T13 template settings.json missing")
+    echo "✗ T13 template settings.json not found at $TEMPLATE_SETTINGS"
+fi
+
 echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -ne 0 ]; then

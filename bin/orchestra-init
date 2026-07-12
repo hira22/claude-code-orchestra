@@ -9,12 +9,29 @@
 
 # settings.json merge function (defined first so the script can be sourced
 # for testing without triggering CLI execution).
+# Deprecated env keys that should be pruned from the user's settings.json on
+# every update. Keys in this list are removed from `.env` before the merge
+# overlays the template. Add a key here when a previously-shipped env var is
+# retired so existing installs converge on the new behavior rather than
+# retaining stale settings via the existing∪template union.
+#
+# History:
+#   - CLAUDE_CODE_SUBAGENT_MODEL: removed in PR#6 (Opus/Sonnet tier switch
+#     moved to per-agent frontmatter `model:` + per-call overrides). Leaving
+#     this env var set would force every subagent onto a fixed model and
+#     silently disable the tier routing.
+DEPRECATED_ENV_KEYS_JSON='["CLAUDE_CODE_SUBAGENT_MODEL"]'
+
 merge_settings_json() {
     local existing="$1"
     local template="$2"
     local output="$3"
+    # Optional 4th arg: JSON array of env keys to drop from $existing.env
+    # before merging. Defaults to [] so callers that don't opt in (e.g. the
+    # test harness) keep the old union semantics.
+    local deprecated_env_json="${4:-[]}"
 
-    jq -s '
+    jq -s --argjson deprecated_env "$deprecated_env_json" '
         .[0] as $existing |
         .[1] as $template |
 
@@ -82,7 +99,18 @@ merge_settings_json() {
                 ask: ($existing.permissions.ask // []),
                 defaultMode: ($existing.permissions.defaultMode // "default")
             },
-            env: (($existing.env // {}) + ($template.env // {}))
+            env: (
+                # Drop deprecated env keys from the existing side first so
+                # the union does not preserve retired settings. Template
+                # values still override existing values for keys that are
+                # not deprecated (standard "template wins on conflict"
+                # semantics used elsewhere in this merge).
+                (($existing.env // {})
+                    | with_entries(
+                        select(.key as $k | $deprecated_env | index($k) | not)
+                      ))
+                + ($template.env // {})
+            )
         }
     ' "$existing" "$template" > "$output"
 }
@@ -317,7 +345,7 @@ if [ -d ".claude" ]; then
     if [ -f ".claude/settings.json" ] && [ -f "$TMP_DIR/.claude/settings.json" ]; then
         if [ "$JQ_AVAILABLE" = true ]; then
             echo "→ settings.json をマージ中..."
-            merge_settings_json ".claude/settings.json" "$TMP_DIR/.claude/settings.json" ".claude/settings.json.tmp"
+            merge_settings_json ".claude/settings.json" "$TMP_DIR/.claude/settings.json" ".claude/settings.json.tmp" "$DEPRECATED_ENV_KEYS_JSON"
             mv ".claude/settings.json.tmp" ".claude/settings.json"
             echo "✓ settings.json をマージしました"
         else
