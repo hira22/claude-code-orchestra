@@ -10,10 +10,20 @@ All agents (Claude Code, subagents, Codex, agy) can read this log.
 
 import json
 import os
-import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+
+# Reuse the shared classification/extraction helpers from lib.cli_logger so
+# behaviour stays in lockstep with the PostToolUse:Bash dispatcher.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib.cli_logger import (  # noqa: E402
+    detect_tool,
+    extract_agy_prompt,
+    extract_codex_prompt,
+    extract_model,
+    truncate_text,
+)
 
 DEFAULT_LOG_FILE = Path(__file__).parent.parent / "logs" / "cli-tools.jsonl"
 
@@ -21,60 +31,6 @@ DEFAULT_LOG_FILE = Path(__file__).parent.parent / "logs" / "cli-tools.jsonl"
 def _resolve_log_file() -> Path:
     override = os.environ.get("CLAUDE_CLI_LOG_FILE")
     return Path(override) if override else DEFAULT_LOG_FILE
-
-
-def extract_codex_prompt(command: str) -> str | None:
-    """Extract prompt from a `codex exec` command.
-
-    Returns the longest quoted string found after `codex exec`. The prompt is
-    almost always significantly longer than any flag value (e.g. legacy forms
-    such as `--config model_reasoning_effort="high"` precede the real prompt),
-    so picking the longest quoted segment correctly skips quoted flag values
-    while remaining robust to multi-line, backslash-continued commands.
-    """
-    anchor = re.search(r"codex\s+exec\b", command)
-    if not anchor:
-        return None
-    rest = command[anchor.end() :]
-    candidates = re.findall(r'"([^"]+)"', rest)
-    candidates += re.findall(r"'([^']+)'", rest)
-    if not candidates:
-        return None
-    return max(candidates, key=len).strip()
-
-
-def extract_agy_prompt(command: str) -> str | None:
-    """Extract prompt from an `agy` command.
-
-    Accepts `agy -p "..."` and `agy -p '...'`, plus intermediate flags
-    such as `agy --model gemini-3.1-pro -p "..."`.
-    """
-    anchor = re.search(r"\bagy\b", command)
-    if not anchor:
-        return None
-    rest = command[anchor.end() :]
-    patterns = [
-        r'-p\s+"([^"]+)"',
-        r"-p\s+'([^']+)'",
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, rest, re.DOTALL)
-        if match:
-            return match.group(1).strip()
-    return None
-
-
-def extract_model(command: str) -> str | None:
-    """Extract model name from command."""
-    match = re.search(r"--model\s+(\S+)", command)
-    return match.group(1) if match else None
-
-
-def truncate_text(text: str, max_length: int = 2000) -> str:
-    """Truncate text if too long."""
-    if len(text) <= max_length:
-        return text
-    return text[:max_length] + f"... [truncated, {len(text)} total chars]"
 
 
 def log_entry(entry: dict) -> None:
@@ -104,20 +60,18 @@ def main() -> None:
     command = tool_input.get("command", "")
     output = tool_response.get("stdout", "") or tool_response.get("content", "")
 
-    # Check if this is a codex or agy command
-    is_codex = "codex" in command.lower()
-    is_agy = "agy" in command.lower() and "codex" not in command.lower()
-
-    if not (is_codex or is_agy):
+    # Classify by the invoked binary (not by substring on the full command);
+    # otherwise an agy prompt that mentions the word "codex" would be routed
+    # into the codex branch and dropped.
+    tool = detect_tool(command)
+    if tool is None:
         return
 
     # Extract prompt based on tool type
-    if is_codex:
-        tool = "codex"
+    if tool == "codex":
         prompt = extract_codex_prompt(command)
         model = extract_model(command) or "default"
     else:
-        tool = "agy"
         prompt = extract_agy_prompt(command)
         # agy supports multiple models via `--model`; record the flag value
         # when present and fall back to the tool name for the default case.

@@ -60,8 +60,52 @@ def extract_agy_prompt(command: str) -> str | None:
 
 
 def extract_model(command: str) -> str | None:
-    match = re.search(r"--model\s+(\S+)", command)
-    return match.group(1) if match else None
+    """Extract the `--model` argument value.
+
+    Accepts all common forms:
+    - ``--model gemini-3.1-pro``   (space-separated, unquoted)
+    - ``--model=gemini-3.1-pro``   (equals-separated, unquoted)
+    - ``--model "Gemini 3.5 Flash"`` / ``--model='Gemini 3.5 Flash'`` (quoted,
+      with spaces; either separator, either quote style)
+
+    Returns the value with surrounding quotes stripped.
+    """
+    match = re.search(
+        r"--model(?:\s+|=)(?:\"([^\"]+)\"|'([^']+)'|(\S+))",
+        command,
+    )
+    if not match:
+        return None
+    return match.group(1) or match.group(2) or match.group(3)
+
+
+# Command-position anchor: start of string, or after a shell separator
+# (``|``, ``&``, ``;``, newline), optionally preceded by ``VAR=val`` env
+# assignments. Used to classify the invoked binary while ignoring the same
+# tokens if they only appear inside a quoted prompt body.
+_CMD_START = r"(?:^|[|&;\n]\s*)(?:\w+=\S+\s+)*"
+
+
+def detect_tool(command: str) -> str | None:
+    """Return ``"codex"`` or ``"agy"`` based on the invoked binary.
+
+    We must not classify by substring on the whole command: an agy call such
+    as ``agy -p "analyze this codex error @err.png"`` legitimately contains
+    the word "codex" inside its prompt body. Anchoring on command-start
+    positions ensures we look at the executable, not the prompt.
+
+    If both binaries appear at command-start (e.g. shell pipeline), the one
+    executed first wins.
+    """
+    codex_match = re.search(_CMD_START + r"codex\b", command)
+    agy_match = re.search(_CMD_START + r"agy\b", command)
+    if codex_match and agy_match:
+        return "codex" if codex_match.start() <= agy_match.start() else "agy"
+    if codex_match:
+        return "codex"
+    if agy_match:
+        return "agy"
+    return None
 
 
 def truncate_text(text: str, max_length: int = 2000) -> str:
@@ -85,18 +129,14 @@ def check(data: dict) -> dict | None:
     command = tool_input.get("command", "")
     output = tool_response.get("stdout", "") or tool_response.get("content", "")
 
-    is_codex = "codex" in command.lower()
-    is_agy = "agy" in command.lower() and "codex" not in command.lower()
-
-    if not (is_codex or is_agy):
+    tool = detect_tool(command)
+    if tool is None:
         return None
 
-    if is_codex:
-        tool = "codex"
+    if tool == "codex":
         prompt = extract_codex_prompt(command)
         model = extract_model(command) or "default"
     else:
-        tool = "agy"
         prompt = extract_agy_prompt(command)
         # agy supports multiple models via `--model`; record the flag value
         # when present and fall back to the tool name for the default case.

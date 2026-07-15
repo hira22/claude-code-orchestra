@@ -57,6 +57,77 @@ def test_extract_model_flag(cli_logger):
     assert mod.extract_model("codex 'foo'") is None
 
 
+def test_extract_model_supports_equals_form(cli_logger):
+    """agy accepts ``--model=NAME`` in addition to space-separated form."""
+    mod, _ = cli_logger
+    assert mod.extract_model("agy --model=gemini-3.1-pro -p 'x'") == "gemini-3.1-pro"
+
+
+def test_extract_model_supports_quoted_display_names(cli_logger):
+    """agy models like ``Gemini 3.5 Flash`` contain spaces; must not truncate."""
+    mod, _ = cli_logger
+    assert (
+        mod.extract_model('agy --model="Gemini 3.5 Flash" -p "x"') == "Gemini 3.5 Flash"
+    )
+    assert (
+        mod.extract_model('agy --model "Gemini 3.5 Flash" -p "x"') == "Gemini 3.5 Flash"
+    )
+    assert (
+        mod.extract_model("agy --model='Gemini 3.5 Flash' -p 'x'") == "Gemini 3.5 Flash"
+    )
+    assert (
+        mod.extract_model("agy --model 'Gemini 3.5 Flash' -p 'x'") == "Gemini 3.5 Flash"
+    )
+
+
+def test_detect_tool_classifies_by_binary_not_prompt_body(cli_logger):
+    """``agy -p "... codex ..."`` must be classified as agy, not codex.
+
+    Regression: prior substring-based detection routed such commands into
+    the codex branch, which then failed to extract a prompt and dropped
+    the log entry entirely.
+    """
+    mod, _ = cli_logger
+    assert (
+        mod.detect_tool('agy -p "analyze this codex error screenshot @err.png"')
+        == "agy"
+    )
+    assert mod.detect_tool('codex exec "explain agy usage"') == "codex"
+    assert mod.detect_tool("ls -la") is None
+    # Env-var prefix should not fool the classifier.
+    assert mod.detect_tool('FOO=bar agy -p "hi"') == "agy"
+
+
+def test_check_logs_agy_when_prompt_mentions_codex(cli_logger):
+    """End-to-end: an agy call whose prompt mentions ``codex`` is logged as agy."""
+    mod, log_file = cli_logger
+    payload = _bash(
+        'agy -p "analyze this codex error screenshot @err.png"',
+        stdout="Error is a KeyError on line 42.",
+        exit_code=0,
+    )
+    result = mod.check(payload)
+    assert result is not None
+    entry = json.loads(log_file.read_text(encoding="utf-8").splitlines()[0])
+    assert entry["tool"] == "agy"
+    assert entry["prompt"] == "analyze this codex error screenshot @err.png"
+
+
+def test_check_writes_agy_entry_with_quoted_model_display_name(cli_logger):
+    """``--model="Gemini 3.5 Flash"`` is recorded verbatim, quotes stripped."""
+    mod, log_file = cli_logger
+    payload = _bash(
+        'agy --model="Gemini 3.5 Flash" -p "describe @img.png"',
+        stdout="A cat.",
+        exit_code=0,
+    )
+    result = mod.check(payload)
+    assert result is not None
+    entry = json.loads(log_file.read_text(encoding="utf-8").splitlines()[0])
+    assert entry["tool"] == "agy"
+    assert entry["model"] == "Gemini 3.5 Flash"
+
+
 def test_truncate_text_preserves_short(cli_logger):
     mod, _ = cli_logger
     assert mod.truncate_text("hello", max_length=10) == "hello"

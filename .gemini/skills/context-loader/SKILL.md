@@ -1,17 +1,22 @@
 ---
 name: context-loader
-description: Load project context from .claude/ directory at the start of every task. This ensures the multimodal CLI (`agy`) has the same coding rules, design decisions, and library constraints as Claude Code.
+description: Reference sheet listing which .claude/ files the caller (multimodal-explore agent) should inject into agy prompts. Auto-loading of this skill by agy is NOT relied upon; the Claude-side agent performs the injection.
 ---
 
 # Context Loader Skill for the Multimodal CLI
 
 ## Purpose
 
-Load shared project context from `.claude/` directory to ensure the multimodal CLI (`agy`) operates with the same knowledge as Claude Code and Codex CLI.
+Enumerate the project-context surface that the `multimodal-explore` agent
+must fold into every `agy` call. `agy`'s auto-loading of project-level
+`.gemini/` context is undocumented, so this file is a **checklist for the
+caller**, not a runtime hook.
 
 ## When to Activate
 
-**ALWAYS** - This skill should run at the beginning of multimodal processing tasks.
+This skill is not self-triggering inside `agy`. The `multimodal-explore` agent
+consults it before invoking `agy -p ...` and injects the relevant items via
+prompt preamble or `agy --add-dir`.
 
 ## Workflow
 

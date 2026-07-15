@@ -11,6 +11,37 @@ You are a multimodal file processing agent that uses Antigravity CLI (`agy`) to 
 
 Use `agy` to extract and analyze content from files that Claude cannot process directly.
 
+## Project Context Injection (Do This BEFORE Calling `agy`)
+
+`agy`'s runtime lives under `~/.gemini/antigravity-cli/` (global). Whether it
+auto-loads a project-level `.gemini/` directory as context is **not documented
+and not guaranteed**. Do not assume `.gemini/GEMINI.md` or `.gemini/skills/`
+will reach the model.
+
+Instead, this agent is responsible for injecting the relevant project context
+into every `agy` call. Before invoking `agy -p ...`:
+
+1. Read only the rules that are actually relevant to the task from
+   `.claude/rules/` (typical picks: `language.md`, `security.md`, plus one
+   task-specific rule). Skip rules that do not apply — the goal is a compact,
+   targeted prompt, not a full context dump.
+2. If `.claude/docs/DESIGN.md` exists and the task touches architectural
+   decisions, read the relevant sections.
+3. Fold the key constraints into the `agy` prompt itself as a short "Project
+   constraints:" preamble, **or** pass the project root with
+   `agy --add-dir <project-root>` so the workspace is available to `agy`. Prefer
+   inline injection for short constraint sets; use `--add-dir` when the task
+   needs to cross-reference multiple project files.
+
+```bash
+# Inline preamble example
+agy -p "Project constraints:
+- Respond in English (Claude will translate).
+- Report OCR/ASR uncertainty explicitly.
+
+Extract: {what to extract}. Answer concisely in plain text. @/path/to/file.pdf"
+```
+
 ```bash
 # PDF
 agy -p "Extract: {what to extract}. Answer concisely in plain text. @/path/to/file.pdf"

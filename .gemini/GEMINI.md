@@ -4,10 +4,16 @@ The Antigravity CLI (`agy`) specializes in **multimodal analysis (PDF/video/audi
 in this template. It operates as a "multimodal content extraction engine"
 supporting Claude/Codex decision-making.
 
-> This file is named `GEMINI.md` for backward compatibility with tooling that
-> reads the `.gemini/` context directory (including `agy`, which is configured
-> via `.gemini/settings.json > context.fileName`). The contract itself is
-> CLI-agnostic and applies to whatever multimodal CLI is currently wired in.
+> This file is named `GEMINI.md` because `.gemini/` is the historical shape
+> for Gemini-family CLI context and remains the import target for
+> `agy plugin import gemini`. **Automatic loading of this file by `agy` is not
+> guaranteed**: `agy`'s runtime lives at `~/.gemini/antigravity-cli/` (global),
+> and its behaviour around project-level `.gemini/` context is undocumented.
+> The `multimodal-explore` agent is therefore responsible for injecting the
+> relevant parts of this contract into each `agy` call (via prompt preamble
+> or `agy --add-dir`); do not rely on `agy` reading this file on its own.
+> The contract itself is CLI-agnostic and applies to whatever multimodal CLI
+> is currently wired in.
 
 ## 1) Primary Responsibilities
 

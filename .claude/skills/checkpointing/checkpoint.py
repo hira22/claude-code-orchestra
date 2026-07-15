@@ -310,7 +310,9 @@ def generate_checkpoint(
 
     # Summary
     codex_count = sum(1 for e in cli_entries if e.get("tool") == "codex")
-    agy_count = sum(1 for e in cli_entries if e.get("tool") == "agy")
+    # Count both the current ``agy`` label and the pre-migration ``gemini``
+    # label so the summary matches the Multimodal (agy) section below.
+    agy_count = sum(1 for e in cli_entries if e.get("tool") in {"agy", "gemini"})
     total_files = sum(len(v) for v in file_changes.values())
     total_tasks = sum(len(t.get("tasks", [])) for t in teams_data)
     completed_tasks = sum(
@@ -388,7 +390,9 @@ def generate_checkpoint(
     lines.append("")
 
     codex_entries = [e for e in cli_entries if e.get("tool") == "codex"]
-    agy_entries = [e for e in cli_entries if e.get("tool") == "agy"]
+    # Include the pre-migration ``gemini`` tool label so history recorded
+    # before the agy migration still shows up under Multimodal.
+    agy_entries = [e for e in cli_entries if e.get("tool") in {"agy", "gemini"}]
 
     for entries, name in [(codex_entries, "Codex"), (agy_entries, "Multimodal (agy)")]:
         if entries:
@@ -505,7 +509,9 @@ def generate_session_summary(
     today = datetime.now(UTC).strftime("%Y-%m-%d")
     total_files = sum(len(v) for v in file_changes.values())
     codex_count = sum(1 for e in cli_entries if e.get("tool") == "codex")
-    agy_count = sum(1 for e in cli_entries if e.get("tool") == "agy")
+    # Count both the current ``agy`` label and the pre-migration ``gemini``
+    # label so the summary matches the Multimodal (agy) section below.
+    agy_count = sum(1 for e in cli_entries if e.get("tool") in {"agy", "gemini"})
 
     summary_lines = [f"### {today}", ""]
     summary_lines.append(f"- {len(commits)} commits, {total_files} files changed")
