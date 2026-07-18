@@ -95,8 +95,25 @@ agy -p "Extract data and trends from this chart:
 
 ### Piping to Files
 
+Do not trust a bare stdout redirect. In non-TTY contexts (e.g. Claude Code's
+Bash tool), `agy -p` can exit 0 with **empty stdout** even after a successful
+extraction whose result was written only to the brain directory
+(google-antigravity/antigravity-cli#408). A bare `agy -p ... > file` can then
+produce an empty file while still consuming quota.
+
 ```bash
-agy -p "Extract all API schemas @api-spec.pdf" > docs/api-schemas.md
+START=$(date +%s)
+agy -p "Extract all API schemas. Answer concisely in plain text. @api-spec.pdf" > docs/api-schemas.md
+
+if [ ! -s docs/api-schemas.md ]; then
+  # stdout was empty — recover the result from brain artifacts instead of
+  # accepting the empty file. Follow the "Non-TTY Output Fallback" procedure
+  # in .claude/agents/multimodal-explore.md: list runs under
+  # ~/.gemini/antigravity-cli/brain/<uuid>/ modified after $START, match the
+  # run by your prompt text in transcript.jsonl, then use that run's
+  # transcript.jsonl and *.md artifacts as the extraction result.
+  echo "agy returned empty stdout; recover output from brain artifacts" >&2
+fi
 ```
 
 ## Rate Limits
