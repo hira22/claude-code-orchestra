@@ -68,9 +68,11 @@ saved to `~/.gemini/antigravity-cli/brain/<uuid>/*.md`.
 - If detailed artifacts matter, remember to also collect the `brain/<uuid>/`
   outputs for the run.
 - Non-TTY caveat: piped runs (Claude Code Bash) may exit 0 with empty stdout
-  (google-antigravity/antigravity-cli#408). If that happens, read the newest
-  `brain/<uuid>/` transcript/artifacts as the result — see the fallback steps
-  in `.claude/agents/multimodal-explore.md`.
+  (google-antigravity/antigravity-cli#408). If that happens, recover the
+  result from `brain/<uuid>/` — but `brain/` is global, so match the run to
+  your call (prompt text in `transcript.jsonl`, started after your call)
+  before using it; see the fallback steps in
+  `.claude/agents/multimodal-explore.md`.
 
 ## Context Management
 

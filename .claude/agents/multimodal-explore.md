@@ -75,12 +75,18 @@ stdout/stderr** even after a successful model round-trip
 content" — the extraction may have succeeded and been written only to the
 brain directory:
 
-1. If `agy` exits 0 but stdout is empty, locate the newest run directory
-   under `~/.gemini/antigravity-cli/brain/<uuid>/` (sort by mtime).
-2. Read `transcript.jsonl` and any `*.md` artifacts there; use them as the
-   extraction result.
-3. Report failure only if both stdout and the brain artifacts are empty —
-   and say explicitly that the agy call consumed quota without output.
+1. Note the time just before invoking `agy` (e.g. `date +%s`).
+2. If `agy` exits 0 but stdout is empty, list run directories under
+   `~/.gemini/antigravity-cli/brain/<uuid>/`, newest first, and consider
+   only those modified after your start time.
+3. **Match the run to this call before trusting it**: `brain/` is global,
+   so parallel `agy` runs (other subagents, other projects) may own the
+   newest directory. Read each candidate's `transcript.jsonl` and accept a
+   run only if it contains your prompt text; then use its `transcript.jsonl`
+   and `*.md` artifacts as the extraction result.
+4. If no candidate matches your prompt, do NOT use another run's output.
+   Report the result as unrecoverable and say explicitly that the agy call
+   consumed quota without attributable output.
 
 ## Supported File Types (Multimodal)
 

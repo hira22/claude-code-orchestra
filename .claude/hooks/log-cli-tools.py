@@ -22,6 +22,7 @@ from lib.cli_logger import (  # noqa: E402
     extract_agy_prompt,
     extract_codex_prompt,
     extract_model,
+    recover_agy_output,
     truncate_text,
 )
 
@@ -81,8 +82,22 @@ def main() -> None:
         # Could not extract prompt, skip logging
         return
 
-    # Determine success
     exit_code = tool_response.get("exit_code", 0)
+
+    # Non-TTY agy runs may exit 0 with empty stdout while the result went to
+    # brain artifacts only; recover it so the consultation is not recorded as
+    # a failed/empty one (see lib.cli_logger.recover_agy_output).
+    recovered_from_brain = False
+    stdout_empty = False
+    if tool == "agy" and exit_code == 0 and not output:
+        brain_output = recover_agy_output(prompt)
+        if brain_output:
+            output = brain_output
+            recovered_from_brain = True
+        else:
+            stdout_empty = True
+
+    # Determine success
     success = exit_code == 0 and bool(output)
 
     # Create log entry
@@ -95,6 +110,12 @@ def main() -> None:
         "success": success,
         "exit_code": exit_code,
     }
+    if recovered_from_brain:
+        entry["recovered_from_brain"] = True
+    if stdout_empty:
+        # exit 0 + no output + no attributable brain run: outcome unknown,
+        # not a confirmed failure — let downstream consumers tell them apart.
+        entry["stdout_empty"] = True
 
     log_entry(entry)
 

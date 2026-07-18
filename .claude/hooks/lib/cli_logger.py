@@ -18,10 +18,21 @@ DEFAULT_LOG_FILE = (
     Path(__file__).resolve().parent.parent.parent / "logs" / "cli-tools.jsonl"
 )
 
+DEFAULT_BRAIN_DIR = Path.home() / ".gemini" / "antigravity-cli" / "brain"
+
+# brain/ is global and accumulates runs from every project; only the most
+# recent runs can belong to the call being logged.
+MAX_BRAIN_RUNS_SCANNED = 10
+
 
 def _resolve_log_file() -> Path:
     override = os.environ.get("CLAUDE_CLI_LOG_FILE")
     return Path(override) if override else DEFAULT_LOG_FILE
+
+
+def _resolve_brain_dir() -> Path:
+    override = os.environ.get("CLAUDE_AGY_BRAIN_DIR")
+    return Path(override) if override else DEFAULT_BRAIN_DIR
 
 
 def extract_codex_prompt(command: str) -> str | None:
@@ -111,6 +122,58 @@ def detect_tool(command: str) -> str | None:
     return None
 
 
+def _normalize_whitespace(text: str) -> str:
+    return " ".join(text.split())
+
+
+def recover_agy_output(prompt: str) -> str | None:
+    """Best-effort recovery of agy output written only to brain artifacts.
+
+    In non-TTY runs agy may exit 0 with empty stdout while the full result
+    is saved under ``brain/<uuid>/`` (google-antigravity/antigravity-cli#408).
+    ``brain/`` is global and parallel agy calls may be writing to it at the
+    same time, so "newest run dir" alone is not enough: a run is only used
+    if its ``transcript.jsonl`` contains this call's prompt, which ties the
+    artifacts to the call being logged. Returns the concatenated ``*.md``
+    artifacts of the matched run, or None when no run can be attributed.
+    """
+    brain_dir = _resolve_brain_dir()
+    if not brain_dir.is_dir():
+        return None
+    needle = _normalize_whitespace(prompt)
+    if not needle:
+        return None
+    try:
+        run_dirs = sorted(
+            (d for d in brain_dir.iterdir() if d.is_dir()),
+            key=lambda d: d.stat().st_mtime,
+            reverse=True,
+        )
+    except OSError:
+        return None
+    for run_dir in run_dirs[:MAX_BRAIN_RUNS_SCANNED]:
+        transcript = run_dir / "transcript.jsonl"
+        if not transcript.is_file():
+            continue
+        try:
+            transcript_text = transcript.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if needle not in _normalize_whitespace(transcript_text):
+            # Belongs to a different (possibly parallel) agy run.
+            continue
+        parts = []
+        for artifact in sorted(run_dir.glob("*.md")):
+            try:
+                content = artifact.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if content.strip():
+                parts.append(content.strip())
+        return "\n\n".join(parts) or None
+    return None
+
+
 def truncate_text(text: str, max_length: int = 2000) -> str:
     if len(text) <= max_length:
         return text
@@ -149,6 +212,20 @@ def check(data: dict) -> dict | None:
         return None
 
     exit_code = tool_response.get("exit_code", 0)
+
+    # Non-TTY agy runs may exit 0 with empty stdout while the result went to
+    # brain artifacts only; recover it so the consultation is not recorded as
+    # a failed/empty one (see recover_agy_output).
+    recovered_from_brain = False
+    stdout_empty = False
+    if tool == "agy" and exit_code == 0 and not output:
+        brain_output = recover_agy_output(prompt)
+        if brain_output:
+            output = brain_output
+            recovered_from_brain = True
+        else:
+            stdout_empty = True
+
     success = exit_code == 0 and bool(output)
 
     entry = {
@@ -160,6 +237,12 @@ def check(data: dict) -> dict | None:
         "success": success,
         "exit_code": exit_code,
     }
+    if recovered_from_brain:
+        entry["recovered_from_brain"] = True
+    if stdout_empty:
+        # exit 0 + no output + no attributable brain run: outcome unknown,
+        # not a confirmed failure — let downstream consumers tell them apart.
+        entry["stdout_empty"] = True
 
     _log_entry(entry)
 

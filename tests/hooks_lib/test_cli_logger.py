@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 import sys
 
 import pytest
@@ -159,6 +160,99 @@ def test_check_writes_agy_entry_with_quoted_model_display_name(cli_logger):
     entry = json.loads(log_file.read_text(encoding="utf-8").splitlines()[0])
     assert entry["tool"] == "agy"
     assert entry["model"] == "Gemini 3.5 Flash"
+
+
+def _make_brain_run(
+    brain_dir, name: str, prompt: str, artifact: str, mtime: float
+) -> None:
+    run_dir = brain_dir / name
+    run_dir.mkdir(parents=True)
+    transcript = run_dir / "transcript.jsonl"
+    transcript.write_text(
+        json.dumps({"role": "user", "content": prompt}) + "\n", encoding="utf-8"
+    )
+    if artifact:
+        (run_dir / "result.md").write_text(artifact, encoding="utf-8")
+    os.utime(run_dir, (mtime, mtime))
+
+
+@pytest.fixture
+def brain_dir(cli_logger, tmp_path, monkeypatch):
+    path = tmp_path / "brain"
+    path.mkdir()
+    monkeypatch.setenv("CLAUDE_AGY_BRAIN_DIR", str(path))
+    return path
+
+
+def test_recover_agy_output_reads_matching_run(cli_logger, brain_dir):
+    mod, _ = cli_logger
+    _make_brain_run(
+        brain_dir, "run-a", "describe @img.png", "A cat on a chair.", mtime=1000.0
+    )
+    assert mod.recover_agy_output("describe @img.png") == "A cat on a chair."
+
+
+def test_recover_agy_output_skips_parallel_run_with_other_prompt(cli_logger, brain_dir):
+    """A newer run from a parallel agy call must not be attributed to this one."""
+    mod, _ = cli_logger
+    _make_brain_run(
+        brain_dir, "run-mine", "describe @img.png", "A cat on a chair.", mtime=1000.0
+    )
+    _make_brain_run(
+        brain_dir,
+        "run-other",
+        "extract @invoice.pdf",
+        "Invoice total: 42.",
+        mtime=2000.0,
+    )
+    assert mod.recover_agy_output("describe @img.png") == "A cat on a chair."
+
+
+def test_recover_agy_output_returns_none_without_match(cli_logger, brain_dir):
+    mod, _ = cli_logger
+    _make_brain_run(
+        brain_dir,
+        "run-other",
+        "extract @invoice.pdf",
+        "Invoice total: 42.",
+        mtime=1000.0,
+    )
+    assert mod.recover_agy_output("describe @img.png") is None
+
+
+def test_recover_agy_output_returns_none_when_brain_dir_missing(
+    cli_logger, tmp_path, monkeypatch
+):
+    mod, _ = cli_logger
+    monkeypatch.setenv("CLAUDE_AGY_BRAIN_DIR", str(tmp_path / "no-such-dir"))
+    assert mod.recover_agy_output("describe @img.png") is None
+
+
+def test_check_recovers_empty_stdout_agy_from_brain(cli_logger, brain_dir):
+    """Non-TTY agy run (exit 0, empty stdout) is logged with the brain output."""
+    mod, log_file = cli_logger
+    _make_brain_run(
+        brain_dir, "run-a", "describe @img.png", "A cat on a chair.", mtime=1000.0
+    )
+    result = mod.check(_bash('agy -p "describe @img.png"', stdout="", exit_code=0))
+    assert result is not None
+    entry = json.loads(log_file.read_text(encoding="utf-8").splitlines()[0])
+    assert entry["success"] is True
+    assert entry["response"] == "A cat on a chair."
+    assert entry["recovered_from_brain"] is True
+    assert "stdout_empty" not in entry
+
+
+def test_check_flags_unrecoverable_empty_stdout_agy(cli_logger, brain_dir):
+    """exit 0 + empty stdout + no attributable run → flagged, not silently failed."""
+    mod, log_file = cli_logger
+    result = mod.check(_bash('agy -p "describe @img.png"', stdout="", exit_code=0))
+    assert result is not None
+    entry = json.loads(log_file.read_text(encoding="utf-8").splitlines()[0])
+    assert entry["success"] is False
+    assert entry["response"] == ""
+    assert entry["stdout_empty"] is True
+    assert "recovered_from_brain" not in entry
 
 
 def test_truncate_text_preserves_short(cli_logger):

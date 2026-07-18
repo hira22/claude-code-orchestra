@@ -139,6 +139,39 @@ def test_agy_prompt_mentioning_codex_is_logged_as_agy(
     assert entry["prompt"] == "analyze this codex error screenshot @err.png"
 
 
+def test_agy_empty_stdout_recovered_from_brain(
+    hook_runner, hook_env, log_file: Path, tmp_path: Path
+):
+    """Non-TTY agy run (exit 0, empty stdout) recovers the brain artifact."""
+    run_dir = tmp_path / "brain" / "run-a"
+    run_dir.mkdir(parents=True)
+    (run_dir / "transcript.jsonl").write_text(
+        json.dumps({"role": "user", "content": "describe @img.png"}) + "\n",
+        encoding="utf-8",
+    )
+    (run_dir / "result.md").write_text("A cat on a chair.", encoding="utf-8")
+    env = {**hook_env, "CLAUDE_AGY_BRAIN_DIR": str(tmp_path / "brain")}
+    payload = _bash('agy -p "describe @img.png"', stdout="", exit_code=0)
+    result = hook_runner(HOOK, payload, env=env)
+    assert result.returncode == 0
+    entry = _last_line(log_file)
+    assert entry["success"] is True
+    assert entry["response"] == "A cat on a chair."
+    assert entry["recovered_from_brain"] is True
+
+
+def test_agy_empty_stdout_without_brain_match_flagged(
+    hook_runner, hook_env, log_file: Path, tmp_path: Path
+):
+    env = {**hook_env, "CLAUDE_AGY_BRAIN_DIR": str(tmp_path / "empty-brain")}
+    payload = _bash('agy -p "describe @img.png"', stdout="", exit_code=0)
+    result = hook_runner(HOOK, payload, env=env)
+    assert result.returncode == 0
+    entry = _last_line(log_file)
+    assert entry["success"] is False
+    assert entry["stdout_empty"] is True
+
+
 def test_agy_with_quoted_model_display_name(hook_runner, hook_env, log_file: Path):
     """``--model="Gemini 3.5 Flash"`` records the full display name."""
     payload = _bash(
