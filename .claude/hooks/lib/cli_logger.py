@@ -40,17 +40,20 @@ def extract_codex_prompt(command: str) -> str | None:
 def extract_agy_prompt(command: str) -> str | None:
     """Extract prompt from an `agy` command.
 
-    Accepts `agy -p "..."` and `agy -p '...'`, plus intermediate flags
-    such as `agy --model gemini-3.1-pro -p "..."`. Anchors on the `agy `
-    token so unrelated `-p` flags in other commands do not match.
+    Accepts the short flag `-p` and its documented long aliases `--print`
+    and `--prompt`, with either quote style and either a space or `=`
+    separator (e.g. `agy --print "..."`, `agy --prompt='...'`), plus
+    intermediate flags such as `agy --model gemini-3.1-pro -p "..."`.
+    Anchors on the `agy` token so unrelated `-p` flags in other commands
+    do not match.
     """
     anchor = re.search(r"\bagy\b", command)
     if not anchor:
         return None
     rest = command[anchor.end() :]
     patterns = [
-        r'-p\s+"([^"]+)"',
-        r"-p\s+'([^']+)'",
+        r'(?:--print|--prompt|-p)(?:\s+|=)"([^"]+)"',
+        r"(?:--print|--prompt|-p)(?:\s+|=)'([^']+)'",
     ]
     for pattern in patterns:
         match = re.search(pattern, rest, re.DOTALL)

@@ -103,7 +103,9 @@ agy -p "Extract: {specific content}. Answer concisely in plain text. @/path/to/f
 ## Prerequisites
 
 - Install: `curl -fsSL https://antigravity.google/cli/install.sh | bash`
-- Auth: initial `agy` run opens browser Google Sign-In; for CI set `ANTIGRAVITY_API_KEY`.
+- Auth: initial `agy` run opens browser Google Sign-In (account-based).
+  Standalone API-key auth is not supported yet, so headless/CI use is not
+  supported; authenticate interactively once per machine.
 - Optional: `agy plugin import gemini` migrates settings/plugins from a previous
   gemini-cli install (`agy` reads `~/.gemini/antigravity-cli/` at runtime).
 

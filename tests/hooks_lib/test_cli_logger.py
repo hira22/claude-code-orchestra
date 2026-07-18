@@ -51,6 +51,39 @@ def test_agy_command_extraction(cli_logger):
     assert mod.extract_agy_prompt("agy --version") is None
 
 
+def test_agy_command_extraction_supports_long_flag_aliases(cli_logger):
+    """``--print`` / ``--prompt`` are documented long forms of ``-p``.
+
+    Regression: only ``-p`` was matched, so long-form invocations were
+    classified as agy but dropped by ``check()`` for lack of a prompt.
+    """
+    mod, _ = cli_logger
+    assert mod.extract_agy_prompt('agy --print "summarize this"') == "summarize this"
+    assert (
+        mod.extract_agy_prompt("agy --prompt 'transcribe @audio.mp3'")
+        == "transcribe @audio.mp3"
+    )
+    assert mod.extract_agy_prompt('agy --print="describe @img.png"') == (
+        "describe @img.png"
+    )
+    assert mod.extract_agy_prompt("agy --prompt='read @doc.pdf'") == "read @doc.pdf"
+
+
+def test_check_writes_agy_entry_with_long_flag(cli_logger):
+    """End-to-end: ``agy --print "..."`` is logged, not silently dropped."""
+    mod, log_file = cli_logger
+    payload = _bash(
+        'agy --print "describe @img.png"',
+        stdout="A cat.",
+        exit_code=0,
+    )
+    result = mod.check(payload)
+    assert result is not None
+    entry = json.loads(log_file.read_text(encoding="utf-8").splitlines()[0])
+    assert entry["tool"] == "agy"
+    assert entry["prompt"] == "describe @img.png"
+
+
 def test_extract_model_flag(cli_logger):
     mod, _ = cli_logger
     assert mod.extract_model("codex --model gpt-5 'foo'") == "gpt-5"

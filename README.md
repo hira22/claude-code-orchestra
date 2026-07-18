@@ -94,8 +94,11 @@ A plugin that lets you use Codex directly from Claude Code. Simplifies code revi
 
 ```bash
 curl -fsSL https://antigravity.google/cli/install.sh | bash
-agy          # first run opens browser Google Sign-In (CI: set ANTIGRAVITY_API_KEY)
+agy          # first run opens browser Google Sign-In (account-based auth only)
 ```
+
+> **Note**: `agy` does not support standalone API-key auth yet, so headless/CI
+> use is not supported. Authenticate interactively once per machine.
 
 If migrating from a previous gemini-cli install, run `agy plugin import gemini`
 to pull existing settings/plugins into `~/.gemini/antigravity-cli/`.
