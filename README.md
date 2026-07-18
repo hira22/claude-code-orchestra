@@ -98,7 +98,9 @@ agy          # first run opens browser Google Sign-In (account-based auth only)
 ```
 
 > **Note**: `agy` does not support standalone API-key auth yet, so headless/CI
-> use is not supported. Authenticate interactively once per machine.
+> use is not supported. Authenticate interactively once per machine, and trust
+> each project workspace on first run (or add it to `trustedWorkspaces` in
+> `~/.gemini/antigravity-cli/settings.json`).
 
 If migrating from a previous gemini-cli install, run `agy plugin import gemini`
 to pull existing settings/plugins into `~/.gemini/antigravity-cli/`.

@@ -66,6 +66,22 @@ artifacts to `~/.gemini/antigravity-cli/brain/<uuid>/*.md`.
   to constrain output to what was asked.
 - If detailed artifacts are needed, also collect files under `brain/<uuid>/` for the run.
 
+## Non-TTY Output Fallback (Required)
+
+Through Claude Code's Bash tool, `agy` runs with stdout piped (non-TTY). In
+that environment `agy -p/--print` has been reported to exit 0 with **empty
+stdout/stderr** even after a successful model round-trip
+(google-antigravity/antigravity-cli#408). Never treat empty stdout as "no
+content" — the extraction may have succeeded and been written only to the
+brain directory:
+
+1. If `agy` exits 0 but stdout is empty, locate the newest run directory
+   under `~/.gemini/antigravity-cli/brain/<uuid>/` (sort by mtime).
+2. Read `transcript.jsonl` and any `*.md` artifacts there; use them as the
+   extraction result.
+3. Report failure only if both stdout and the brain artifacts are empty —
+   and say explicitly that the agy call consumed quota without output.
+
 ## Supported File Types (Multimodal)
 
 | Category | Extensions |

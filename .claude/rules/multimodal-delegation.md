@@ -67,6 +67,10 @@ saved to `~/.gemini/antigravity-cli/brain/<uuid>/*.md`.
 - Append **"Answer concisely in plain text"** (or equivalent) to every prompt.
 - If detailed artifacts matter, remember to also collect the `brain/<uuid>/`
   outputs for the run.
+- Non-TTY caveat: piped runs (Claude Code Bash) may exit 0 with empty stdout
+  (google-antigravity/antigravity-cli#408). If that happens, read the newest
+  `brain/<uuid>/` transcript/artifacts as the result — see the fallback steps
+  in `.claude/agents/multimodal-explore.md`.
 
 ## Context Management
 
@@ -106,6 +110,11 @@ agy -p "Extract: {specific content}. Answer concisely in plain text. @/path/to/f
 - Auth: initial `agy` run opens browser Google Sign-In (account-based).
   Standalone API-key auth is not supported yet, so headless/CI use is not
   supported; authenticate interactively once per machine.
+- Workspace trust: each new project directory triggers an interactive
+  Workspace Trust prompt on first use. Launch `agy` interactively once in the
+  project root to trust it, or add the path to `trustedWorkspaces` in
+  `~/.gemini/antigravity-cli/settings.json` — otherwise the first automated
+  `agy -p` call (auto-trigger, subagent) blocks waiting for confirmation.
 - Optional: `agy plugin import gemini` migrates settings/plugins from a previous
   gemini-cli install (`agy` reads `~/.gemini/antigravity-cli/` at runtime).
 
