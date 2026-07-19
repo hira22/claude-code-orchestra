@@ -106,13 +106,14 @@ START=$(date +%s)
 agy -p "Extract all API schemas. Answer concisely in plain text. @api-spec.pdf" > docs/api-schemas.md
 
 if [ ! -s docs/api-schemas.md ]; then
-  # stdout was empty — recover the result from brain artifacts instead of
+  # stdout was empty — recover the result from the brain dir instead of
   # accepting the empty file. Follow the "Non-TTY Output Fallback" procedure
-  # in .claude/agents/multimodal-explore.md: list runs under
-  # ~/.gemini/antigravity-cli/brain/<uuid>/ modified after $START, match the
-  # run by your prompt text in transcript.jsonl, then use that run's
-  # transcript.jsonl and *.md artifacts as the extraction result.
-  echo "agy returned empty stdout; recover output from brain artifacts" >&2
+  # in .claude/agents/multimodal-explore.md: find runs under
+  # ~/.gemini/antigravity-cli/brain/<uuid>/ whose
+  # .system_generated/logs/transcript.jsonl was modified after $START and
+  # contains your prompt text, then use that run's root *.md artifacts —
+  # or, if none exist, the last PLANNER_RESPONSE in the transcript.
+  echo "agy returned empty stdout; recover output from the brain dir" >&2
 fi
 ```
 

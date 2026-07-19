@@ -25,10 +25,12 @@ DEFAULT_BRAIN_DIR = Path.home() / ".gemini" / "antigravity-cli" / "brain"
 # recent runs can belong to the call being logged.
 MAX_BRAIN_RUNS_SCANNED = 10
 
-# This hook fires right after the Bash call returns, and agy writes its brain
-# artifacts just before exiting, so a run attributable to the current call has
-# an mtime at most seconds old. Anything older is a previous run that happens
-# to share the prompt (repeated invocations) and must not be recovered.
+# This hook fires right after the Bash call returns, and agy appends to the
+# run's transcript until it exits, so the transcript of an attributable run is
+# at most seconds old. Anything older is a previous run that happens to share
+# the prompt (repeated invocations) and must not be recovered. Applied to the
+# transcript mtime, never the run dir mtime (which reflects the run's START
+# and would disqualify long video/audio jobs).
 MAX_BRAIN_RUN_AGE_SECONDS = 300
 
 
@@ -133,19 +135,88 @@ def _normalize_whitespace(text: str) -> str:
     return " ".join(text.split())
 
 
+def _find_transcript(run_dir: Path) -> Path | None:
+    """Locate a run's transcript.
+
+    Current Antigravity CLI builds write it to
+    ``.system_generated/logs/transcript.jsonl``; older builds used the run
+    root. (Layout verified against real runs on 2026-07-19.)
+    """
+    nested = run_dir / ".system_generated" / "logs" / "transcript.jsonl"
+    if nested.is_file():
+        return nested
+    flat = run_dir / "transcript.jsonl"
+    if flat.is_file():
+        return flat
+    return None
+
+
+def _transcript_search_text(transcript_text: str) -> str:
+    """Build the text used for prompt matching from a raw transcript.
+
+    The transcript is JSONL, so prompt characters like quotes and
+    backslashes appear JSON-escaped in the raw file; a substring match
+    against the raw text would miss the call's own run. Decode each line's
+    ``content`` field and match against that instead, keeping unparseable
+    lines verbatim as a safety net.
+    """
+    parts = []
+    for line in transcript_text.splitlines():
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            parts.append(line)
+            continue
+        if isinstance(entry, dict):
+            content = entry.get("content")
+            if isinstance(content, str):
+                parts.append(content)
+        else:
+            parts.append(line)
+    return " ".join(parts)
+
+
+def _extract_transcript_response(transcript_text: str) -> str | None:
+    """Return the last non-empty MODEL PLANNER_RESPONSE content, if any.
+
+    Short extractions often produce no ``*.md`` artifact; the final answer
+    then only exists as the planner's closing message in the transcript.
+    """
+    response = None
+    for line in transcript_text.splitlines():
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("source") != "MODEL" or entry.get("type") != "PLANNER_RESPONSE":
+            continue
+        content = entry.get("content")
+        if isinstance(content, str) and content.strip():
+            response = content.strip()
+    return response
+
+
 def recover_agy_output(prompt: str) -> str | None:
-    """Best-effort recovery of agy output written only to brain artifacts.
+    """Best-effort recovery of agy output written only to the brain dir.
 
     In non-TTY runs agy may exit 0 with empty stdout while the full result
     is saved under ``brain/<uuid>/`` (google-antigravity/antigravity-cli#408).
     ``brain/`` is global and parallel agy calls may be writing to it at the
-    same time, so "newest run dir" alone is not enough: a run is only used
-    if its ``transcript.jsonl`` contains this call's prompt, which ties the
-    artifacts to the call being logged. Prompt match alone is also not
-    enough: a repeated prompt would match runs from previous invocations,
-    so runs older than ``MAX_BRAIN_RUN_AGE_SECONDS`` are never considered.
-    Returns the concatenated ``*.md`` artifacts of the matched run, or None
-    when no run can be attributed.
+    same time, so "newest run" alone is not enough: a run is only used if
+    its transcript contains this call's prompt, which ties it to the call
+    being logged. Prompt match alone is also not enough: a repeated prompt
+    would match runs from previous invocations, so runs whose transcript is
+    older than ``MAX_BRAIN_RUN_AGE_SECONDS`` are never considered. Recency
+    is judged on the transcript file, not the run dir: the dir mtime
+    reflects the START of a run (its entries are created up front), while
+    the transcript is appended until agy exits — moments before this hook
+    fires — so long video/audio jobs stay attributable.
+
+    Returns the concatenated root ``*.md`` artifacts of the matched run,
+    falling back to its final planner response, or None when no run can be
+    attributed or the matched run has no recoverable content.
     """
     brain_dir = _resolve_brain_dir()
     if not brain_dir.is_dir():
@@ -155,26 +226,29 @@ def recover_agy_output(prompt: str) -> str | None:
         return None
     cutoff = time.time() - MAX_BRAIN_RUN_AGE_SECONDS
     try:
-        run_dirs = sorted(
-            (
-                d
-                for d in brain_dir.iterdir()
-                if d.is_dir() and d.stat().st_mtime >= cutoff
-            ),
-            key=lambda d: d.stat().st_mtime,
-            reverse=True,
-        )
+        run_dirs = [d for d in brain_dir.iterdir() if d.is_dir()]
     except OSError:
         return None
-    for run_dir in run_dirs[:MAX_BRAIN_RUNS_SCANNED]:
-        transcript = run_dir / "transcript.jsonl"
-        if not transcript.is_file():
+    candidates: list[tuple[float, Path, Path]] = []
+    for run_dir in run_dirs:
+        transcript = _find_transcript(run_dir)
+        if transcript is None:
             continue
+        try:
+            mtime = transcript.stat().st_mtime
+        except OSError:
+            continue
+        if mtime >= cutoff:
+            candidates.append((mtime, run_dir, transcript))
+    candidates.sort(key=lambda c: c[0], reverse=True)
+    for _, run_dir, transcript in candidates[:MAX_BRAIN_RUNS_SCANNED]:
         try:
             transcript_text = transcript.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        if needle not in _normalize_whitespace(transcript_text):
+        if needle not in _normalize_whitespace(
+            _transcript_search_text(transcript_text)
+        ):
             # Belongs to a different (possibly parallel) agy run.
             continue
         parts = []
@@ -185,7 +259,11 @@ def recover_agy_output(prompt: str) -> str | None:
                 continue
             if content.strip():
                 parts.append(content.strip())
-        return "\n\n".join(parts) or None
+        if parts:
+            return "\n\n".join(parts)
+        # The matched run is this call's run; if it has no recoverable
+        # content, report unrecoverable rather than scanning other runs.
+        return _extract_transcript_response(transcript_text)
     return None
 
 

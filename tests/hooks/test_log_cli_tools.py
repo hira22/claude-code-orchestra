@@ -142,11 +142,23 @@ def test_agy_prompt_mentioning_codex_is_logged_as_agy(
 def test_agy_empty_stdout_recovered_from_brain(
     hook_runner, hook_env, log_file: Path, tmp_path: Path
 ):
-    """Non-TTY agy run (exit 0, empty stdout) recovers the brain artifact."""
+    """Non-TTY agy run (exit 0, empty stdout) recovers the brain artifact.
+
+    The run dir mirrors the real Antigravity CLI layout: the transcript
+    lives under ``.system_generated/logs/``, artifacts at the run root.
+    """
     run_dir = tmp_path / "brain" / "run-a"
-    run_dir.mkdir(parents=True)
-    (run_dir / "transcript.jsonl").write_text(
-        json.dumps({"role": "user", "content": "describe @img.png"}) + "\n",
+    logs_dir = run_dir / ".system_generated" / "logs"
+    logs_dir.mkdir(parents=True)
+    (logs_dir / "transcript.jsonl").write_text(
+        json.dumps(
+            {
+                "source": "USER_EXPLICIT",
+                "type": "USER_INPUT",
+                "content": "<USER_REQUEST>\ndescribe @img.png\n</USER_REQUEST>",
+            }
+        )
+        + "\n",
         encoding="utf-8",
     )
     (run_dir / "result.md").write_text("A cat on a chair.", encoding="utf-8")

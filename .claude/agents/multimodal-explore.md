@@ -59,8 +59,10 @@ agy -p "Analyze: components, relationships, data flow. Answer concisely in plain
 ## Important: Constrain agy's Output
 
 `agy` is agent-like and may return conversational summaries plus unrequested
-"Recommended Changes / Open Questions" sections. It also saves detailed
-artifacts to `~/.gemini/antigravity-cli/brain/<uuid>/*.md`.
+"Recommended Changes / Open Questions" sections. It may also save detailed
+artifacts to `~/.gemini/antigravity-cli/brain/<uuid>/*.md` (run root; short
+extractions often produce none — the answer then only exists in the run's
+transcript).
 
 - Always append **"Answer concisely in plain text"** (or equivalent) to the prompt
   to constrain output to what was asked.
@@ -77,13 +79,19 @@ brain directory:
 
 1. Note the time just before invoking `agy` (e.g. `date +%s`).
 2. If `agy` exits 0 but stdout is empty, list run directories under
-   `~/.gemini/antigravity-cli/brain/<uuid>/`, newest first, and consider
-   only those modified after your start time.
+   `~/.gemini/antigravity-cli/brain/<uuid>/`. Each run's transcript is at
+   `<uuid>/.system_generated/logs/transcript.jsonl` (run root in older CLI
+   builds). Judge recency by the **transcript's** mtime, not the run dir's:
+   the dir mtime reflects the run's start, so long video/audio jobs would
+   look stale, while the transcript is written until `agy` exits. Consider
+   only transcripts modified after your start time.
 3. **Match the run to this call before trusting it**: `brain/` is global,
    so parallel `agy` runs (other subagents, other projects) may own the
-   newest directory. Read each candidate's `transcript.jsonl` and accept a
-   run only if it contains your prompt text; then use its `transcript.jsonl`
-   and `*.md` artifacts as the extraction result.
+   newest run. Accept a run only if its transcript contains your prompt
+   text (it appears inside a `<USER_REQUEST>` wrapper). Then use the run's
+   root `*.md` artifacts as the extraction result; if it has none, use the
+   last non-empty `PLANNER_RESPONSE` entry (source `MODEL`) in the
+   transcript — short extractions often leave the answer only there.
 4. If no candidate matches your prompt, do NOT use another run's output.
    Report the result as unrecoverable and say explicitly that the agy call
    consumed quota without attributable output.

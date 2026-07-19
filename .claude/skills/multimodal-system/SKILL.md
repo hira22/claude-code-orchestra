@@ -42,8 +42,9 @@ agy -p "Analyze: components, relationships, data flow. Answer concisely in plain
 ## Constrain agy Output
 
 `agy` is agent-like and may return conversational summaries plus unrequested
-"Recommended Changes / Open Questions" sections. Detailed artifacts are saved
-to `~/.gemini/antigravity-cli/brain/<uuid>/*.md`.
+"Recommended Changes / Open Questions" sections. Detailed artifacts may be
+saved to `~/.gemini/antigravity-cli/brain/<uuid>/*.md` (short extractions
+often leave the answer only in the run's transcript instead).
 
 Always append **"Answer concisely in plain text"** (or equivalent) to constrain
 the response to what was asked.

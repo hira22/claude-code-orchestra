@@ -164,17 +164,54 @@ def test_check_writes_agy_entry_with_quoted_model_display_name(cli_logger):
 
 
 def _make_brain_run(
-    brain_dir, name: str, prompt: str, artifact: str, mtime: float
+    brain_dir,
+    name: str,
+    prompt: str,
+    artifact: str = "",
+    response: str = "",
+    transcript_mtime: float | None = None,
+    dir_mtime: float | None = None,
+    flat_transcript: bool = False,
 ) -> None:
+    """Create a brain run dir mirroring the real Antigravity CLI layout.
+
+    Real runs store the transcript at ``.system_generated/logs/transcript.jsonl``
+    (JSONL entries with source/type/content; the user prompt appears inside a
+    ``<USER_REQUEST>`` wrapper and the final answer in the last MODEL
+    PLANNER_RESPONSE). ``flat_transcript=True`` reproduces the legacy layout
+    with ``transcript.jsonl`` at the run root.
+    """
     run_dir = brain_dir / name
-    run_dir.mkdir(parents=True)
-    transcript = run_dir / "transcript.jsonl"
+    entries = [
+        {
+            "step_index": 0,
+            "source": "USER_EXPLICIT",
+            "type": "USER_INPUT",
+            "content": f"<USER_REQUEST>\n{prompt}\n</USER_REQUEST>",
+        },
+        {
+            "step_index": 1,
+            "source": "MODEL",
+            "type": "PLANNER_RESPONSE",
+            "content": response,
+        },
+    ]
+    if flat_transcript:
+        run_dir.mkdir(parents=True)
+        transcript = run_dir / "transcript.jsonl"
+    else:
+        logs_dir = run_dir / ".system_generated" / "logs"
+        logs_dir.mkdir(parents=True)
+        transcript = logs_dir / "transcript.jsonl"
     transcript.write_text(
-        json.dumps({"role": "user", "content": prompt}) + "\n", encoding="utf-8"
+        "".join(json.dumps(e) + "\n" for e in entries), encoding="utf-8"
     )
     if artifact:
         (run_dir / "result.md").write_text(artifact, encoding="utf-8")
-    os.utime(run_dir, (mtime, mtime))
+    if transcript_mtime is not None:
+        os.utime(transcript, (transcript_mtime, transcript_mtime))
+    if dir_mtime is not None:
+        os.utime(run_dir, (dir_mtime, dir_mtime))
 
 
 @pytest.fixture
@@ -186,9 +223,10 @@ def brain_dir(cli_logger, tmp_path, monkeypatch):
 
 
 def test_recover_agy_output_reads_matching_run(cli_logger, brain_dir):
+    """Transcript is found at the real nested path, artifact returned."""
     mod, _ = cli_logger
     _make_brain_run(
-        brain_dir, "run-a", "describe @img.png", "A cat on a chair.", mtime=time.time()
+        brain_dir, "run-a", "describe @img.png", artifact="A cat on a chair."
     )
     assert mod.recover_agy_output("describe @img.png") == "A cat on a chair."
 
@@ -198,14 +236,18 @@ def test_recover_agy_output_skips_parallel_run_with_other_prompt(cli_logger, bra
     mod, _ = cli_logger
     now = time.time()
     _make_brain_run(
-        brain_dir, "run-mine", "describe @img.png", "A cat on a chair.", mtime=now - 10
+        brain_dir,
+        "run-mine",
+        "describe @img.png",
+        artifact="A cat on a chair.",
+        transcript_mtime=now - 10,
     )
     _make_brain_run(
         brain_dir,
         "run-other",
         "extract @invoice.pdf",
-        "Invoice total: 42.",
-        mtime=now,
+        artifact="Invoice total: 42.",
+        transcript_mtime=now,
     )
     assert mod.recover_agy_output("describe @img.png") == "A cat on a chair."
 
@@ -213,11 +255,7 @@ def test_recover_agy_output_skips_parallel_run_with_other_prompt(cli_logger, bra
 def test_recover_agy_output_returns_none_without_match(cli_logger, brain_dir):
     mod, _ = cli_logger
     _make_brain_run(
-        brain_dir,
-        "run-other",
-        "extract @invoice.pdf",
-        "Invoice total: 42.",
-        mtime=time.time(),
+        brain_dir, "run-other", "extract @invoice.pdf", artifact="Invoice total: 42."
     )
     assert mod.recover_agy_output("describe @img.png") is None
 
@@ -231,9 +269,86 @@ def test_recover_agy_output_ignores_stale_run_with_same_prompt(cli_logger, brain
     mod, _ = cli_logger
     stale = time.time() - mod.MAX_BRAIN_RUN_AGE_SECONDS - 60
     _make_brain_run(
-        brain_dir, "run-old", "describe @img.png", "A cat on a chair.", mtime=stale
+        brain_dir,
+        "run-old",
+        "describe @img.png",
+        artifact="A cat on a chair.",
+        transcript_mtime=stale,
+        dir_mtime=stale,
     )
     assert mod.recover_agy_output("describe @img.png") is None
+
+
+def test_recover_agy_output_survives_long_runs(cli_logger, brain_dir):
+    """Long jobs: run dir mtime reflects the START of the run, so a video
+    analysis can leave the dir mtime far older than the age cutoff. Recency
+    must be judged on the transcript, which is written until agy exits."""
+    mod, _ = cli_logger
+    now = time.time()
+    _make_brain_run(
+        brain_dir,
+        "run-long",
+        "summarize @video.mp4",
+        artifact="Key moments: ...",
+        transcript_mtime=now,
+        dir_mtime=now - mod.MAX_BRAIN_RUN_AGE_SECONDS - 600,
+    )
+    assert mod.recover_agy_output("summarize @video.mp4") == "Key moments: ..."
+
+
+def test_recover_agy_output_falls_back_to_planner_response(cli_logger, brain_dir):
+    """Short extractions often leave no *.md artifact; the answer then only
+    exists as the final MODEL PLANNER_RESPONSE inside the transcript."""
+    mod, _ = cli_logger
+    _make_brain_run(brain_dir, "run-a", "what is the secret word", response="BANANA")
+    assert mod.recover_agy_output("what is the secret word") == "BANANA"
+
+
+def test_recover_agy_output_prefers_artifact_over_planner_response(
+    cli_logger, brain_dir
+):
+    mod, _ = cli_logger
+    _make_brain_run(
+        brain_dir,
+        "run-a",
+        "describe @img.png",
+        artifact="Full report.",
+        response="Short summary.",
+    )
+    assert mod.recover_agy_output("describe @img.png") == "Full report."
+
+
+def test_recover_agy_output_returns_none_when_run_has_no_content(cli_logger, brain_dir):
+    """A matched run with neither artifacts nor planner text (e.g. quota
+    exhaustion) is unrecoverable — not an excuse to scan other runs."""
+    mod, _ = cli_logger
+    _make_brain_run(brain_dir, "run-dead", "describe @img.png")
+    assert mod.recover_agy_output("describe @img.png") is None
+
+
+def test_recover_agy_output_matches_prompt_with_json_escaped_chars(
+    cli_logger, brain_dir
+):
+    """Prompts with quotes/backslashes are JSON-escaped inside the raw
+    transcript file; matching must compare against the decoded content, not
+    the raw JSONL text, or the call's own run is skipped as unrelated."""
+    mod, _ = cli_logger
+    prompt = 'describe "the cat" and C:\\photos @img.png'
+    _make_brain_run(brain_dir, "run-a", prompt, artifact="A cat on a chair.")
+    assert mod.recover_agy_output(prompt) == "A cat on a chair."
+
+
+def test_recover_agy_output_reads_legacy_flat_transcript(cli_logger, brain_dir):
+    """Older CLI builds wrote transcript.jsonl at the run root."""
+    mod, _ = cli_logger
+    _make_brain_run(
+        brain_dir,
+        "run-a",
+        "describe @img.png",
+        artifact="A cat on a chair.",
+        flat_transcript=True,
+    )
+    assert mod.recover_agy_output("describe @img.png") == "A cat on a chair."
 
 
 def test_recover_agy_output_returns_none_when_brain_dir_missing(
@@ -248,7 +363,7 @@ def test_check_recovers_empty_stdout_agy_from_brain(cli_logger, brain_dir):
     """Non-TTY agy run (exit 0, empty stdout) is logged with the brain output."""
     mod, log_file = cli_logger
     _make_brain_run(
-        brain_dir, "run-a", "describe @img.png", "A cat on a chair.", mtime=time.time()
+        brain_dir, "run-a", "describe @img.png", artifact="A cat on a chair."
     )
     result = mod.check(_bash('agy -p "describe @img.png"', stdout="", exit_code=0))
     assert result is not None
