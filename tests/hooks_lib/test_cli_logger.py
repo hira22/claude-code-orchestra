@@ -10,6 +10,7 @@ import importlib
 import json
 import os
 import sys
+import time
 
 import pytest
 
@@ -187,7 +188,7 @@ def brain_dir(cli_logger, tmp_path, monkeypatch):
 def test_recover_agy_output_reads_matching_run(cli_logger, brain_dir):
     mod, _ = cli_logger
     _make_brain_run(
-        brain_dir, "run-a", "describe @img.png", "A cat on a chair.", mtime=1000.0
+        brain_dir, "run-a", "describe @img.png", "A cat on a chair.", mtime=time.time()
     )
     assert mod.recover_agy_output("describe @img.png") == "A cat on a chair."
 
@@ -195,15 +196,16 @@ def test_recover_agy_output_reads_matching_run(cli_logger, brain_dir):
 def test_recover_agy_output_skips_parallel_run_with_other_prompt(cli_logger, brain_dir):
     """A newer run from a parallel agy call must not be attributed to this one."""
     mod, _ = cli_logger
+    now = time.time()
     _make_brain_run(
-        brain_dir, "run-mine", "describe @img.png", "A cat on a chair.", mtime=1000.0
+        brain_dir, "run-mine", "describe @img.png", "A cat on a chair.", mtime=now - 10
     )
     _make_brain_run(
         brain_dir,
         "run-other",
         "extract @invoice.pdf",
         "Invoice total: 42.",
-        mtime=2000.0,
+        mtime=now,
     )
     assert mod.recover_agy_output("describe @img.png") == "A cat on a chair."
 
@@ -215,7 +217,21 @@ def test_recover_agy_output_returns_none_without_match(cli_logger, brain_dir):
         "run-other",
         "extract @invoice.pdf",
         "Invoice total: 42.",
-        mtime=1000.0,
+        mtime=time.time(),
+    )
+    assert mod.recover_agy_output("describe @img.png") is None
+
+
+def test_recover_agy_output_ignores_stale_run_with_same_prompt(cli_logger, brain_dir):
+    """An old run matching the prompt must not be attributed to this call.
+
+    Repeated prompts (e.g. `agy -p "describe @img.png"` run again days later)
+    would otherwise resurface a previous run's artifacts as this call's output.
+    """
+    mod, _ = cli_logger
+    stale = time.time() - mod.MAX_BRAIN_RUN_AGE_SECONDS - 60
+    _make_brain_run(
+        brain_dir, "run-old", "describe @img.png", "A cat on a chair.", mtime=stale
     )
     assert mod.recover_agy_output("describe @img.png") is None
 
@@ -232,7 +248,7 @@ def test_check_recovers_empty_stdout_agy_from_brain(cli_logger, brain_dir):
     """Non-TTY agy run (exit 0, empty stdout) is logged with the brain output."""
     mod, log_file = cli_logger
     _make_brain_run(
-        brain_dir, "run-a", "describe @img.png", "A cat on a chair.", mtime=1000.0
+        brain_dir, "run-a", "describe @img.png", "A cat on a chair.", mtime=time.time()
     )
     result = mod.check(_bash('agy -p "describe @img.png"', stdout="", exit_code=0))
     assert result is not None

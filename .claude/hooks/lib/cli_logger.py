@@ -11,6 +11,7 @@ they do not pollute the developer's session log.
 import json
 import os
 import re
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -23,6 +24,12 @@ DEFAULT_BRAIN_DIR = Path.home() / ".gemini" / "antigravity-cli" / "brain"
 # brain/ is global and accumulates runs from every project; only the most
 # recent runs can belong to the call being logged.
 MAX_BRAIN_RUNS_SCANNED = 10
+
+# This hook fires right after the Bash call returns, and agy writes its brain
+# artifacts just before exiting, so a run attributable to the current call has
+# an mtime at most seconds old. Anything older is a previous run that happens
+# to share the prompt (repeated invocations) and must not be recovered.
+MAX_BRAIN_RUN_AGE_SECONDS = 300
 
 
 def _resolve_log_file() -> Path:
@@ -134,8 +141,11 @@ def recover_agy_output(prompt: str) -> str | None:
     ``brain/`` is global and parallel agy calls may be writing to it at the
     same time, so "newest run dir" alone is not enough: a run is only used
     if its ``transcript.jsonl`` contains this call's prompt, which ties the
-    artifacts to the call being logged. Returns the concatenated ``*.md``
-    artifacts of the matched run, or None when no run can be attributed.
+    artifacts to the call being logged. Prompt match alone is also not
+    enough: a repeated prompt would match runs from previous invocations,
+    so runs older than ``MAX_BRAIN_RUN_AGE_SECONDS`` are never considered.
+    Returns the concatenated ``*.md`` artifacts of the matched run, or None
+    when no run can be attributed.
     """
     brain_dir = _resolve_brain_dir()
     if not brain_dir.is_dir():
@@ -143,9 +153,14 @@ def recover_agy_output(prompt: str) -> str | None:
     needle = _normalize_whitespace(prompt)
     if not needle:
         return None
+    cutoff = time.time() - MAX_BRAIN_RUN_AGE_SECONDS
     try:
         run_dirs = sorted(
-            (d for d in brain_dir.iterdir() if d.is_dir()),
+            (
+                d
+                for d in brain_dir.iterdir()
+                if d.is_dir() and d.stat().st_mtime >= cutoff
+            ),
             key=lambda d: d.stat().st_mtime,
             reverse=True,
         )
