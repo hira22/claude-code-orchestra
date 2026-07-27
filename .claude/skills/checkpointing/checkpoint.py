@@ -310,7 +310,9 @@ def generate_checkpoint(
 
     # Summary
     codex_count = sum(1 for e in cli_entries if e.get("tool") == "codex")
-    gemini_count = sum(1 for e in cli_entries if e.get("tool") == "gemini")
+    # Count both the current ``agy`` label and the pre-migration ``gemini``
+    # label so the summary matches the Multimodal (agy) section below.
+    agy_count = sum(1 for e in cli_entries if e.get("tool") in {"agy", "gemini"})
     total_files = sum(len(v) for v in file_changes.values())
     total_tasks = sum(len(t.get("tasks", [])) for t in teams_data)
     completed_tasks = sum(
@@ -331,7 +333,7 @@ def generate_checkpoint(
         f"{len(file_changes['deleted'])} deleted)"
     )
     lines.append(f"- **Codex consultations**: {codex_count}")
-    lines.append(f"- **Gemini multimodal**: {gemini_count}")
+    lines.append(f"- **Multimodal (agy)**: {agy_count}")
     if teams_data:
         total_members = sum(len(t.get("members", [])) for t in teams_data)
         lines.append(
@@ -388,12 +390,14 @@ def generate_checkpoint(
     lines.append("")
 
     codex_entries = [e for e in cli_entries if e.get("tool") == "codex"]
-    gemini_entries = [e for e in cli_entries if e.get("tool") == "gemini"]
+    # Include the pre-migration ``gemini`` tool label so history recorded
+    # before the agy migration still shows up under Multimodal.
+    agy_entries = [e for e in cli_entries if e.get("tool") in {"agy", "gemini"}]
 
-    for entries, name in [(codex_entries, "Codex"), (gemini_entries, "Gemini")]:
+    for entries, name in [(codex_entries, "Codex"), (agy_entries, "Multimodal (agy)")]:
         if entries:
             lines.append(
-                f"### {name} ({len(entries)} {'consultations' if name == 'Codex' else 'researches'})"
+                f"### {name} ({len(entries)} {'consultations' if name == 'Codex' else 'tasks'})"
             )
             lines.append("")
             for entry in entries[:15]:
@@ -505,15 +509,17 @@ def generate_session_summary(
     today = datetime.now(UTC).strftime("%Y-%m-%d")
     total_files = sum(len(v) for v in file_changes.values())
     codex_count = sum(1 for e in cli_entries if e.get("tool") == "codex")
-    gemini_count = sum(1 for e in cli_entries if e.get("tool") == "gemini")
+    # Count both the current ``agy`` label and the pre-migration ``gemini``
+    # label so the summary matches the Multimodal (agy) section below.
+    agy_count = sum(1 for e in cli_entries if e.get("tool") in {"agy", "gemini"})
 
     summary_lines = [f"### {today}", ""]
     summary_lines.append(f"- {len(commits)} commits, {total_files} files changed")
 
     if codex_count:
         summary_lines.append(f"- Codex: {codex_count} consultations")
-    if gemini_count:
-        summary_lines.append(f"- Gemini: {gemini_count} multimodal tasks")
+    if agy_count:
+        summary_lines.append(f"- Multimodal (agy): {agy_count} tasks")
 
     for team in teams_data:
         tasks = team.get("tasks", [])
@@ -581,7 +587,7 @@ A "skill" is a repeatable workflow pattern that can be triggered by specific phr
 
 3. **Check against existing skills** in `.claude/skills/`:
    - start-feature, team-implement, team-review, plan, tdd, simplify
-   - codex-system, gemini-system, design-tracker, checkpointing
+   - codex-system, multimodal-system, design-tracker, checkpointing
    - research-lib, update-lib-docs, init
    - If pattern matches an existing skill, note it but still report
 

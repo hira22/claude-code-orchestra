@@ -1,19 +1,30 @@
 #!/usr/bin/env python3
 """
-PostToolUse hook: Log Codex/Gemini CLI input/output to JSONL file.
+PostToolUse hook: Log Codex/agy CLI input/output to JSONL file.
 
-Triggers after Bash tool calls containing 'codex' or 'gemini' commands.
+Triggers after Bash tool calls containing 'codex' or 'agy' commands.
 Logs are stored in .claude/logs/cli-tools.jsonl
 
-All agents (Claude Code, subagents, Codex, Gemini) can read this log.
+All agents (Claude Code, subagents, Codex, agy) can read this log.
 """
 
 import json
 import os
-import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+
+# Reuse the shared classification/extraction helpers from lib.cli_logger so
+# behaviour stays in lockstep with the PostToolUse:Bash dispatcher.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib.cli_logger import (  # noqa: E402
+    detect_tool,
+    extract_agy_prompt,
+    extract_codex_prompt,
+    extract_model,
+    recover_agy_output,
+    truncate_text,
+)
 
 DEFAULT_LOG_FILE = Path(__file__).parent.parent / "logs" / "cli-tools.jsonl"
 
@@ -21,53 +32,6 @@ DEFAULT_LOG_FILE = Path(__file__).parent.parent / "logs" / "cli-tools.jsonl"
 def _resolve_log_file() -> Path:
     override = os.environ.get("CLAUDE_CLI_LOG_FILE")
     return Path(override) if override else DEFAULT_LOG_FILE
-
-
-def extract_codex_prompt(command: str) -> str | None:
-    """Extract prompt from a `codex exec` command.
-
-    Returns the longest quoted string found after `codex exec`. The prompt is
-    almost always significantly longer than any flag value (e.g. legacy forms
-    such as `--config model_reasoning_effort="high"` precede the real prompt),
-    so picking the longest quoted segment correctly skips quoted flag values
-    while remaining robust to multi-line, backslash-continued commands.
-    """
-    anchor = re.search(r"codex\s+exec\b", command)
-    if not anchor:
-        return None
-    rest = command[anchor.end() :]
-    candidates = re.findall(r'"([^"]+)"', rest)
-    candidates += re.findall(r"'([^']+)'", rest)
-    if not candidates:
-        return None
-    return max(candidates, key=len).strip()
-
-
-def extract_gemini_prompt(command: str) -> str | None:
-    """Extract prompt from gemini command."""
-    # Pattern: gemini -p "prompt" or gemini -p 'prompt'
-    patterns = [
-        r'gemini\s+-p\s+"([^"]+)"',
-        r"gemini\s+-p\s+'([^']+)'",
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, command, re.DOTALL)
-        if match:
-            return match.group(1).strip()
-    return None
-
-
-def extract_model(command: str) -> str | None:
-    """Extract model name from command."""
-    match = re.search(r"--model\s+(\S+)", command)
-    return match.group(1) if match else None
-
-
-def truncate_text(text: str, max_length: int = 2000) -> str:
-    """Truncate text if too long."""
-    if len(text) <= max_length:
-        return text
-    return text[:max_length] + f"... [truncated, {len(text)} total chars]"
 
 
 def log_entry(entry: dict) -> None:
@@ -97,29 +61,43 @@ def main() -> None:
     command = tool_input.get("command", "")
     output = tool_response.get("stdout", "") or tool_response.get("content", "")
 
-    # Check if this is a codex or gemini command
-    is_codex = "codex" in command.lower()
-    is_gemini = "gemini" in command.lower() and "codex" not in command.lower()
-
-    if not (is_codex or is_gemini):
+    # Classify by the invoked binary (not by substring on the full command);
+    # otherwise an agy prompt that mentions the word "codex" would be routed
+    # into the codex branch and dropped.
+    tool = detect_tool(command)
+    if tool is None:
         return
 
     # Extract prompt based on tool type
-    if is_codex:
-        tool = "codex"
+    if tool == "codex":
         prompt = extract_codex_prompt(command)
         model = extract_model(command) or "default"
     else:
-        tool = "gemini"
-        prompt = extract_gemini_prompt(command)
-        model = "gemini-3.1-pro-preview"
+        prompt = extract_agy_prompt(command)
+        # agy supports multiple models via `--model`; record the flag value
+        # when present and fall back to the tool name for the default case.
+        model = extract_model(command) or "agy"
 
     if not prompt:
         # Could not extract prompt, skip logging
         return
 
-    # Determine success
     exit_code = tool_response.get("exit_code", 0)
+
+    # Non-TTY agy runs may exit 0 with empty stdout while the result went to
+    # brain artifacts only; recover it so the consultation is not recorded as
+    # a failed/empty one (see lib.cli_logger.recover_agy_output).
+    recovered_from_brain = False
+    stdout_empty = False
+    if tool == "agy" and exit_code == 0 and not output:
+        brain_output = recover_agy_output(prompt)
+        if brain_output:
+            output = brain_output
+            recovered_from_brain = True
+        else:
+            stdout_empty = True
+
+    # Determine success
     success = exit_code == 0 and bool(output)
 
     # Create log entry
@@ -132,6 +110,12 @@ def main() -> None:
         "success": success,
         "exit_code": exit_code,
     }
+    if recovered_from_brain:
+        entry["recovered_from_brain"] = True
+    if stdout_empty:
+        # exit 0 + no output + no attributable brain run: outcome unknown,
+        # not a confirmed failure — let downstream consumers tell them apart.
+        entry["stdout_empty"] = True
 
     log_entry(entry)
 

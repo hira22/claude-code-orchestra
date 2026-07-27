@@ -3,7 +3,7 @@
 UserPromptSubmit hook: Route to appropriate agent based on user intent.
 
 Routing rules:
-- Multimodal files (PDF/video/audio/image) → Gemini CLI (HIGHEST PRIORITY)
+- Multimodal files (PDF/video/audio/image) → Antigravity CLI (`agy`) (HIGHEST PRIORITY)
 - Codebase understanding / large analysis → Opus subagent (1M context)
 - External research / survey → Opus subagent
 - Planning, design, complex code → Codex CLI
@@ -13,7 +13,7 @@ import json
 import re
 import sys
 
-# Multimodal file extensions that MUST be processed by Gemini
+# Multimodal file extensions that MUST be processed by agy
 MULTIMODAL_EXTENSIONS = [
     # PDF
     ".pdf",
@@ -190,10 +190,10 @@ def detect_agent(prompt: str) -> tuple[str | None, str, bool]:
     """
     prompt_lower = prompt.lower()
 
-    # HIGHEST PRIORITY: Multimodal file detection → Gemini
+    # HIGHEST PRIORITY: Multimodal file detection → agy
     multimodal_file = detect_multimodal_files(prompt)
     if multimodal_file:
-        return "gemini-multimodal", multimodal_file, True
+        return "agy-multimodal", multimodal_file, True
 
     # Codex Plugin triggers checked first because they are more specific
     # phrases (e.g. "レビューして") that would otherwise be shadowed by
@@ -235,10 +235,10 @@ def main():
                     "hookEventName": "UserPromptSubmit",
                     "additionalContext": (
                         f"[Multimodal File Detected] Found '{trigger}' in prompt. "
-                        "**MUST** use Gemini CLI to process this file. "
-                        "Pass the file to Gemini with specific extraction instructions: "
-                        f'`gemini -p "Extract: {{what to extract}} @{trigger}"` '
-                        "Do NOT attempt to read this file directly — use Gemini for content extraction."
+                        "**MUST** use Antigravity CLI (`agy`) to process this file. "
+                        "Route via the `multimodal-explore` subagent, or call directly with: "
+                        f'`agy -p "Extract: {{what to extract}}. Answer concisely in plain text. @{trigger}"` '
+                        "Do NOT attempt to read this file directly — use `agy` for content extraction."
                     ),
                 }
             }

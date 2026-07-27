@@ -53,7 +53,7 @@ IGNORE_OUTPUTS = [
 
 SKIP_COMMANDS = [
     "codex ",
-    "gemini ",
+    "agy ",
 ]
 
 MIN_OUTPUT_LENGTH = 20

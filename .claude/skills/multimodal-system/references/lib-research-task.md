@@ -2,7 +2,7 @@
 
 When delegating library research, use a general-purpose subagent (Opus) with WebSearch/WebFetch.
 
-> Gemini CLI is specialized for multimodal processing only. For research tasks, use general-purpose subagent.
+> `agy` (Antigravity CLI) is specialized for multimodal processing only. For research tasks, use general-purpose subagent.
 
 ## Prompt Template
 

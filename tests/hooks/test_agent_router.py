@@ -20,7 +20,7 @@ def test_short_prompt_emits_nothing(hook_runner):
     assert result.stdout.strip() == ""
 
 
-def test_multimodal_pdf_routes_to_gemini(hook_runner):
+def test_multimodal_pdf_routes_to_agy(hook_runner):
     result = hook_runner(HOOK, {"prompt": "Please summarize report.pdf for me"})
     assert result.returncode == 0
     out = _parse_output(result.stdout)
@@ -28,6 +28,9 @@ def test_multimodal_pdf_routes_to_gemini(hook_runner):
     ctx = out["hookSpecificOutput"]["additionalContext"]
     assert "Multimodal File Detected" in ctx
     assert "report.pdf" in ctx
+    # Command hint should reference the Antigravity CLI (`agy`), not gemini-cli.
+    assert "agy -p" in ctx
+    assert "gemini -p" not in ctx
 
 
 def test_multimodal_japanese_adjacent_extension_strips_prefix(hook_runner):

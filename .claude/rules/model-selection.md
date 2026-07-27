@@ -11,7 +11,7 @@ per-call via the `model` parameter on the Task/Agent tool.
 | Agent | Default | Rationale |
 |-------|---------|-----------|
 | `general-purpose` | `opus` | Handles design, analysis, and complex implementation |
-| `gemini-explore` | `sonnet` | Gemini CLI wrapper; Claude only gathers context and formats output |
+| `multimodal-explore` | `sonnet` | Antigravity CLI (`agy`) wrapper; Claude only gathers context and formats output |
 | `codex-debugger` | `sonnet` | Codex CLI wrapper; deep reasoning happens in Codex (GPT-5.4) |
 
 ## When to Use Opus

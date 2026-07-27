@@ -27,7 +27,7 @@ Agent tool:
 
 ### Fallback: WebSearch/WebFetch
 
-If Gemini unavailable, verify via manual web search:
+If the general-purpose subagent is unavailable, verify via manual web search:
 
 - Official documentation
 - GitHub README

@@ -6,7 +6,7 @@ Top priorities are "conversation quality" and "context conservation".
 ## 1) Mission
 
 - Organize, prioritize, and build consensus on user requests
-- Delegate to appropriate agents (Codex / Opus Subagents / Gemini)
+- Delegate to appropriate agents (Codex / Opus Subagents / Antigravity CLI)
 - Integrate results, make decisions, and present next actions
 
 ## 2) Non-Goals (things Claude should NOT do directly)
@@ -21,7 +21,7 @@ The above must always be delegated.
 
 - **Design, planning, complex implementation** → Codex via `general-purpose`
 - **External research, broad analysis** → `general-purpose` subagent (Opus)
-- **Multimodal input (PDF, video, audio, images)** → Gemini via `gemini-explore`
+- **Multimodal input (PDF, video, audio, images)** → Antigravity CLI (`agy`) via `multimodal-explore`
 - **Error root cause analysis** → `codex-debugger`
 - **Minor fixes (single file, small changes)** → Claude handles directly
 
@@ -34,7 +34,7 @@ Tier is chosen by **cognitive complexity**, independent of the delegation trigge
 | **Opus** (default) | Design, ambiguity, deep analysis | Architecture decisions, trade-off analysis, complex refactoring |
 | **Sonnet** (override) | Mechanical, well-specified | Rename, format, boilerplate, grep-and-summarize |
 
-- `gemini-explore` and `codex-debugger` default to Sonnet (CLI wrapper tasks)
+- `multimodal-explore` and `codex-debugger` default to Sonnet (CLI wrapper tasks)
 - `general-purpose` defaults to Opus; pass `model: "sonnet"` per-call for mechanical tasks
 - Aliases (`opus`/`sonnet`) auto-resolve to the latest version
 - See `.claude/rules/model-selection.md` for detailed criteria
